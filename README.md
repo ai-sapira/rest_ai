@@ -67,14 +67,26 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## 🚀 Despliegue
 
-Simply open [Lovable](https://lovable.dev/projects/4b7a55d6-1139-40d3-9475-f514f1efc903) and click on Share -> Publish.
+### Netlify (Recomendado)
 
-## Can I connect a custom domain to my Lovable project?
+1. Ve a [Netlify.com](https://netlify.com) y haz login
+2. Haz clic en "Add new site" → "Import an existing project"
+3. Conecta con GitHub y selecciona el repositorio `rest_ai`
+4. Netlify detectará automáticamente la configuración del `netlify.toml`
+5. Los ajustes serán:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `dist`
+   - **Node version**: `18`
 
-Yes, you can!
+### Variables de entorno
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Si necesitas configurar variables de entorno (como claves de Supabase):
+- Ve a Site settings → Environment variables en Netlify
+- Agrega las variables necesarias
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 🔗 Enlaces
+
+- **Repositorio**: https://github.com/SegurNeo/rest_ai
+- **Despliegue**: [Configurar en Netlify](https://netlify.com)
