@@ -72,10 +72,33 @@ export function useAuth() {
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
 
-      if (!error) {
+      if (!error && data) {
         setProfile(data)
+      } else {
+        // No profile row yet: create a minimal one from auth metadata (non-blocking)
+        const fallback: Profile = {
+          user_id: userId,
+          full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario',
+          avatar_url: user?.user_metadata?.avatar_url || null,
+          restaurant_name: user?.user_metadata?.restaurant_name || null,
+          region: user?.user_metadata?.region || null,
+          bio: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        setProfile(fallback)
+        // Try to persist profile, but don't block UI
+        try {
+          await supabase.from('profiles').upsert({
+            user_id: userId,
+            full_name: fallback.full_name,
+            avatar_url: fallback.avatar_url,
+            restaurant_name: fallback.restaurant_name,
+            region: fallback.region,
+          })
+        } catch (_e) {}
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
