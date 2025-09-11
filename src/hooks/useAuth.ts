@@ -56,6 +56,16 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Safety: ensure UI doesn't get stuck on loading forever
+  useEffect(() => {
+    if (!loading) return
+    const timeoutId = setTimeout(() => {
+      // If still loading after timeout, gracefully stop loading
+      setLoading(false)
+    }, 4000)
+    return () => clearTimeout(timeoutId)
+  }, [loading])
+
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
