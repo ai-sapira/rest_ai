@@ -93,11 +93,12 @@ export function usePosts(filters: UsePostsFilters = {}) {
 
       let query = supabase
         .from('posts')
-        .select('*')
+        // Fetch only necessary columns for initial paint
+        .select('id, community_id, topic_id, actor_type, actor_user_id, actor_org_id, content, category, region, likes_count, comments_count, shares_count, visibility, is_pinned, created_at, updated_at')
         .is('deleted_at', null)
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
-        .limit(filters.limit || 20)
+        .limit(Math.min(filters.limit || 20, 20))
 
       // Filter to show posts from communities user is member of OR public posts (no community)
       if (user && userCommunityIds.length > 0) {
@@ -139,6 +140,24 @@ export function usePosts(filters: UsePostsFilters = {}) {
         let newPosts = data as Post[]
         
         if (newPosts.length > 0) {
+          // Fast path: if user is not authenticated, skip costly enrichment queries
+          if (!user) {
+            console.log('usePosts: unauthenticated fast path, posts:', newPosts.length)
+            setHasMore(newPosts.length === (filters.limit || 20))
+            if (replace || !cursor) {
+              setPosts(newPosts)
+            } else {
+              setPosts(prev => {
+                const existingIds = new Set(prev.map(p => p.id))
+                const uniqueNew = newPosts.filter(p => !existingIds.has(p.id))
+                return [...prev, ...uniqueNew]
+              })
+            }
+            clearTimeout(timeoutId)
+            setAbortController(null)
+            return
+          }
+
           // Get unique user IDs, org IDs, community IDs
           const userIds = [...new Set(newPosts.map(p => p.actor_user_id).filter(Boolean))]
           const orgIds = [...new Set(newPosts.map(p => p.actor_org_id).filter(Boolean))]
