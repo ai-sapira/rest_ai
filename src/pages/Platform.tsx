@@ -32,6 +32,7 @@ import AnuncioEdit from "./AnuncioEdit";
 import Servicios from "./Servicios";
 import ServicioDetail from "./ServicioDetail";
 import Explorar from "./Explorar";
+import ProviderProfile from "./ProviderProfile";
 import CommunityDetail from "./CommunityDetail";
 import { CreateCommunityForm } from "@/components/CreateCommunityForm";
 import { useCommunities } from "@/hooks/useCommunities";
@@ -383,6 +384,7 @@ export default function Platform() {
             <Route path="/anuncios/:id" element={<AnuncioDetail />} />
             <Route path="/anuncios/:id/editar" element={<AnuncioEdit />} />
             <Route path="/servicios/:id" element={<ServicioDetail />} />
+            <Route path="/proveedor/:providerId" element={<ProviderProfile />} />
             
             <Route path="/perfil" element={<Profile />} />
             <Route path="/*" element={<Dashboard />} />
@@ -391,14 +393,16 @@ export default function Platform() {
       </div>
 
       {/* Global Create Community Modal */}
-      <CreateCommunityForm
-        isOpen={isCreateCommunityModalOpen}
-        onClose={() => {
-          console.log('Cerrando modal crear comunidad desde Platform.tsx');
-          setIsCreateCommunityModalOpen(false);
-        }}
-        onSuccess={handleCommunityCreated}
-      />
+      {isCreateCommunityModalOpen && (
+        <CreateCommunityForm
+          isOpen={isCreateCommunityModalOpen}
+          onClose={() => {
+            console.log('Cerrando modal crear comunidad desde Platform.tsx');
+            setIsCreateCommunityModalOpen(false);
+          }}
+          onSuccess={handleCommunityCreated}
+        />
+      )}
     </div>
   );
 }

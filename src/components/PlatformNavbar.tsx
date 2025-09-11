@@ -52,9 +52,11 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
            path.includes('/crear-anuncio') ||
            path.includes('/servicios/') ||
            path.includes('/anuncios/') ||
+           path.includes('/proveedor/') ||
            path.includes('/explorar') ||
            path.includes('/mis-comunidades') ||
-           path.includes('/comunidades/');
+           path.includes('/comunidades/') ||
+           path === '/platform';
   }, [location.pathname]);
 
   // Check if we should hide the create button (on profile page)

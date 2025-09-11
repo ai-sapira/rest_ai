@@ -20,6 +20,8 @@ import {
   Package
 } from "lucide-react";
 import { useAnuncios, type Anuncio } from "@/hooks/useAnuncios";
+import { humanizeLabel } from "@/lib/utils";
+import { contratarConfig, matchesUnifiedType, getUnifiedTypeColor, getUnifiedTypeLabel } from "@/lib/contratarConfig";
 
 export default function Maquinaria() {
   const navigate = useNavigate();
@@ -35,13 +37,13 @@ export default function Maquinaria() {
   const [locationFilter, setLocationFilter] = useState("todos");
   const [conditionFilter, setConditionFilter] = useState("todos");
   const [typeFilter, setTypeFilter] = useState("todos");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("todos");
 
   // Apply filters
+  const cfg = contratarConfig.maquinaria;
   const filteredAnuncios = maquinariaAnuncios.filter(anuncio => {
     const matchesPrice = priceFilter === "todos" || 
-      (priceFilter === "bajo" && anuncio.precio && parseInt(anuncio.precio) < 2000) ||
-      (priceFilter === "medio" && anuncio.precio && parseInt(anuncio.precio) >= 2000 && parseInt(anuncio.precio) <= 5000) ||
-      (priceFilter === "alto" && anuncio.precio && parseInt(anuncio.precio) > 5000);
+      (anuncio.precio != null && cfg.priceRanges.some(r => r.id === priceFilter && r.test(parseInt(anuncio.precio)))) ;
     
     const matchesLocation = locationFilter === "todos" || 
       anuncio.ubicacion.region.toLowerCase().includes(locationFilter.toLowerCase());
@@ -49,44 +51,16 @@ export default function Maquinaria() {
     const matchesCondition = conditionFilter === "todos" || 
       (anuncio.estado_producto && anuncio.estado_producto.toLowerCase().includes(conditionFilter.toLowerCase()));
     
-    const matchesType = typeFilter === "todos" || anuncio.tipo === typeFilter;
+    const matchesType = matchesUnifiedType(typeFilter as any, anuncio.tipo);
 
-    return matchesPrice && matchesLocation && matchesCondition && matchesType;
+    const matchesSubcategory = subcategoryFilter === "todos" ||
+      (anuncio.subcategoria && anuncio.subcategoria.toLowerCase().includes(subcategoryFilter.toLowerCase()));
+
+    return matchesPrice && matchesLocation && matchesCondition && matchesType && matchesSubcategory;
   });
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "vendo":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "compro":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "alquilo":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "busco_alquiler":
-        return "bg-orange-100 text-orange-800 border-orange-200";
-      case "oferta":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "vendo":
-        return "VENTA";
-      case "compro":
-        return "COMPRA";
-      case "alquilo":
-        return "ALQUILER";
-      case "busco_alquiler":
-        return "BUSCO ALQUILER";
-      case "oferta":
-        return "OFERTA";
-      default:
-        return type.toUpperCase();
-    }
-  };
+  const getTypeColor = getUnifiedTypeColor;
+  const getTypeLabel = getUnifiedTypeLabel;
 
   const getConditionColor = (estado: string) => {
     switch (estado.toLowerCase()) {
@@ -174,11 +148,21 @@ export default function Maquinaria() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los tipos</SelectItem>
-              <SelectItem value="vendo">🔵 Venta</SelectItem>
-              <SelectItem value="compro">🟣 Compra</SelectItem>
-              <SelectItem value="alquilo">🟢 Alquiler</SelectItem>
-              <SelectItem value="busco_alquiler">🟠 Busco Alquiler</SelectItem>
-              <SelectItem value="oferta">🔴 Oferta</SelectItem>
+              <SelectItem value="venta">Venta</SelectItem>
+              <SelectItem value="compra">Compra</SelectItem>
+              <SelectItem value="alquiler">Alquiler</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={subcategoryFilter} onValueChange={setSubcategoryFilter}>
+            <SelectTrigger className="w-auto min-w-40">
+              <SelectValue placeholder="Subcategoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas las subcategorías</SelectItem>
+              {cfg.subcategories.map(sc => (
+                <SelectItem key={sc} value={sc.toLowerCase()}>{sc}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -188,9 +172,9 @@ export default function Maquinaria() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los precios</SelectItem>
-              <SelectItem value="bajo">Menos de €2,000</SelectItem>
-              <SelectItem value="medio">€2,000 - €5,000</SelectItem>
-              <SelectItem value="alto">Más de €5,000</SelectItem>
+              {cfg.priceRanges.map(r => (
+                <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -213,9 +197,9 @@ export default function Maquinaria() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los estados</SelectItem>
-              <SelectItem value="nuevo">Nuevo</SelectItem>
-              <SelectItem value="como nuevo">Como nuevo</SelectItem>
-              <SelectItem value="usado">Usado</SelectItem>
+              {cfg.conditionOptions.map(opt => (
+                <SelectItem key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -233,6 +217,7 @@ export default function Maquinaria() {
                 setLocationFilter("todos");
                 setConditionFilter("todos");
                 setTypeFilter("todos");
+                setSubcategoryFilter("todos");
               }}
               className="gap-2 text-muted-foreground hover:text-foreground"
             >
@@ -275,22 +260,19 @@ export default function Maquinaria() {
                           </Badge>
                           {anuncio.estado_producto && (
                             <Badge variant="outline" className={`${getConditionColor(anuncio.estado_producto)} text-xs`}>
-                              {anuncio.estado_producto}
+                              {humanizeLabel(anuncio.estado_producto)}
                             </Badge>
                           )}
                         </div>
                         {/* Provider badge */}
                         {anuncio.actor_type === 'provider' && anuncio.provider_info && (
                           <div className="flex items-center gap-1">
-                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
-                              <span className="mr-1">⭐</span>
-                              {anuncio.provider_info.verified ? 'Proveedor Verificado' : 'Proveedor'}
+                            <Badge 
+                              variant="outline" 
+                              className={`${anuncio.provider_info.verified ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-700 border-gray-200'} text-xs`}
+                            >
+                              {anuncio.provider_info.verified ? 'Proveedor verificado' : 'Proveedor'}
                             </Badge>
-                            {anuncio.provider_info.rating && (
-                              <span className="text-xs text-gray-500">
-                                {anuncio.provider_info.rating.toFixed(1)}
-                              </span>
-                            )}
                           </div>
                         )}
                       </div>
@@ -350,7 +332,9 @@ export default function Maquinaria() {
                           className="flex items-center gap-2 text-sm p-2 bg-yellow-50 rounded-lg border border-yellow-200 cursor-pointer hover:bg-yellow-100 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/platform/proveedor/${anuncio.provider_id}`);
+                            if (anuncio.provider_id) {
+                              navigate(`/platform/proveedor/${anuncio.provider_id}`);
+                            }
                           }}
                         >
                           <div className="w-6 h-6 bg-yellow-200 rounded-full flex items-center justify-center">

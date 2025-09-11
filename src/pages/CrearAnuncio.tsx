@@ -31,6 +31,7 @@ import { FiPackage, FiMapPin, FiDollarSign, FiUpload, FiPhone, FiChevronRight, F
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useAnuncios } from '@/hooks/useAnuncios';
 
 interface FormData {
   type: 'vendo' | 'busco' | 'alquiler' | 'oferta' | 'ofrezco-servicio' | 'busco-contratar' | null;
@@ -243,6 +244,7 @@ export default function CrearAnuncio() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+  const { createAnuncio } = useAnuncios();
 
   // Helper to detect if current flow is servicios (when type is 'oferta')
   const isServiciosCategory = formData.type === 'oferta';
@@ -397,8 +399,7 @@ export default function CrearAnuncio() {
 
   const handlePublish = async () => {
     try {
-      // Import useAnuncios hook
-      const { createAnuncio } = await import('@/hooks/useAnuncios');
+      console.log('Iniciando publicación de anuncio...', formData);
       
       // Transform form data to match the database schema
       const anuncioData = {
@@ -454,53 +455,32 @@ export default function CrearAnuncio() {
         })
       };
 
-      // Here we would normally use the hook, but since we're in a handler,
-      // we'll directly use supabase
-      const { supabase } = await import('@/lib/supabase');
-      const { useAuth } = await import('@/hooks/useAuth');
+      console.log('Datos del anuncio preparados:', anuncioData);
+
+      // Use the hook to create the anuncio
+      const result = await createAnuncio(anuncioData);
       
-      // Get current user (we'll need to handle this properly)
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
+      if (result) {
         toast({
-          title: "Error",
-          description: "Debes estar logueado para crear un anuncio.",
-          status: "error",
+          title: "¡Anuncio publicado!",
+          description: "Tu anuncio ha sido creado exitosamente.",
+          status: "success",
           duration: 3000,
           isClosable: true,
         });
-        return;
+        
+        // Redirect to announcements list
+        navigate('/platform/mis-anuncios');
+      } else {
+        throw new Error('No se pudo crear el anuncio');
       }
-
-      const { data, error } = await supabase
-        .from('anuncios')
-        .insert([{
-          ...anuncioData,
-          user_id: user.id
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-    toast({
-      title: "¡Anuncio publicado!",
-      description: "Tu anuncio ha sido creado exitosamente.",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
-      
-      // Redirect to announcements list
-    navigate('/platform/mis-anuncios');
     } catch (error) {
       console.error('Error creating anuncio:', error);
       toast({
         title: "Error",
-        description: "Hubo un problema al crear el anuncio. Inténtalo de nuevo.",
+        description: `Hubo un problema al crear el anuncio: ${error instanceof Error ? error.message : 'Error desconocido'}`,
         status: "error",
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     }

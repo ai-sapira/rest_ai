@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProviders } from "@/hooks/useProviders";
-import { useAnuncios } from "@/hooks/useAnuncios";
+import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,15 +62,19 @@ export default function ProviderProfile() {
   const { providerId } = useParams<{ providerId: string }>();
   const navigate = useNavigate();
   const { getProviderById } = useProviders();
-  const { anuncios } = useAnuncios();
   
   const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("productos");
+  const [providerAnuncios, setProviderAnuncios] = useState<any[]>([]);
+  const [anunciosLoading, setAnunciosLoading] = useState(false);
 
   useEffect(() => {
     const fetchProvider = async () => {
-      if (!providerId) return;
+      if (!providerId) {
+        setLoading(false);
+        return;
+      }
       
       setLoading(true);
       try {
@@ -84,12 +88,34 @@ export default function ProviderProfile() {
     };
 
     fetchProvider();
-  }, [providerId, getProviderById]);
+  }, [providerId]);
 
-  // Filter anuncios by this provider
-  const providerAnuncios = anuncios.filter(anuncio => 
-    anuncio.actor_type === 'provider' && anuncio.provider_id === providerId
-  );
+  // Cargar anuncios del proveedor directamente desde la tabla base para evitar errores 500 de vistas
+  useEffect(() => {
+    const fetchProviderAnuncios = async () => {
+      if (!providerId) return;
+      setAnunciosLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('anuncios')
+          .select('*')
+          .eq('actor_type', 'provider')
+          .eq('provider_id', providerId)
+          .eq('estado', 'activo')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setProviderAnuncios(data || []);
+      } catch (err) {
+        console.error('Error fetching provider anuncios:', err);
+        setProviderAnuncios([]);
+      } finally {
+        setAnunciosLoading(false);
+      }
+    };
+
+    fetchProviderAnuncios();
+  }, [providerId]);
 
   const formatNumber = (num: number) => {
     if (num >= 1000) {
@@ -271,7 +297,7 @@ export default function ProviderProfile() {
 
               {/* Products Tab */}
               <TabsContent value="productos" className="space-y-4">
-                {providerAnuncios.length > 0 ? (
+                {!anunciosLoading && providerAnuncios.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4">
                     {providerAnuncios.map((anuncio) => (
                       <Card 
@@ -328,13 +354,13 @@ export default function ProviderProfile() {
                               
                               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                 <span>{anuncio.subcategoria}</span>
-                                {anuncio.envio && (
+                                {anuncio.envio ? (
                                   <div className="flex items-center gap-1">
                                     <Truck className="h-3 w-3" />
                                     <span>Envío disponible</span>
                                   </div>
-                                )}
-                                <span>{anuncio.ubicacion.city}</span>
+                                ) : null}
+                                {anuncio.ubicacion?.city && <span>{anuncio.ubicacion.city}</span>}
                               </div>
                             </div>
                           </div>
@@ -342,6 +368,16 @@ export default function ProviderProfile() {
                       </Card>
                     ))}
                   </div>
+                ) : anunciosLoading ? (
+                  <Card>
+                    <CardContent className="p-8">
+                      <div className="h-6 w-40 bg-gray-100 animate-pulse rounded mb-4" />
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="h-28 bg-gray-50 animate-pulse rounded" />
+                        <div className="h-28 bg-gray-50 animate-pulse rounded" />
+                      </div>
+                    </CardContent>
+                  </Card>
                 ) : (
                   <Card>
                     <CardContent className="p-8 text-center">
@@ -448,7 +484,7 @@ export default function ProviderProfile() {
                 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Tiempo de respuesta</span>
-                  <span className="font-semibold text-green-600">< 2h</span>
+                  <span className="font-semibold text-green-600">&lt; 2h</span>
                 </div>
               </CardContent>
             </Card>

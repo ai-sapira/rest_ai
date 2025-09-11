@@ -20,6 +20,8 @@ import {
   Utensils
 } from "lucide-react";
 import { useAnuncios, type Anuncio } from "@/hooks/useAnuncios";
+import { humanizeLabel } from "@/lib/utils";
+import { contratarConfig, matchesUnifiedType, getUnifiedTypeColor, getUnifiedTypeLabel } from "@/lib/contratarConfig";
 
 export default function Utensilios() {
   const navigate = useNavigate();
@@ -35,13 +37,13 @@ export default function Utensilios() {
   const [locationFilter, setLocationFilter] = useState("todos");
   const [conditionFilter, setConditionFilter] = useState("todos");
   const [typeFilter, setTypeFilter] = useState("todos");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("todos");
 
   // Apply filters
+  const cfg = contratarConfig.utensilios;
   const filteredAnuncios = utensiliosAnuncios.filter(anuncio => {
     const matchesPrice = priceFilter === "todos" || 
-      (priceFilter === "bajo" && anuncio.precio && parseInt(anuncio.precio) < 300) ||
-      (priceFilter === "medio" && anuncio.precio && parseInt(anuncio.precio) >= 300 && parseInt(anuncio.precio) <= 800) ||
-      (priceFilter === "alto" && anuncio.precio && parseInt(anuncio.precio) > 800);
+      (anuncio.precio != null && cfg.priceRanges.some(r => r.id === priceFilter && r.test(parseInt(anuncio.precio)))) ;
     
     const matchesLocation = locationFilter === "todos" || 
       anuncio.ubicacion.region.toLowerCase().includes(locationFilter.toLowerCase());
@@ -49,21 +51,45 @@ export default function Utensilios() {
     const matchesCondition = conditionFilter === "todos" || 
       (anuncio.estado_producto && anuncio.estado_producto.toLowerCase().includes(conditionFilter.toLowerCase()));
     
-    const matchesType = typeFilter === "todos" || anuncio.tipo === typeFilter;
+    const matchesType = matchesUnifiedType(typeFilter as any, anuncio.tipo);
 
-    return matchesPrice && matchesLocation && matchesCondition && matchesType;
+    const matchesSubcategory = subcategoryFilter === "todos" ||
+      (anuncio.subcategoria && anuncio.subcategoria.toLowerCase().includes(subcategoryFilter.toLowerCase()));
+
+    return matchesPrice && matchesLocation && matchesCondition && matchesType && matchesSubcategory;
   });
 
   const getTypeColor = (type: string) => {
     switch (type) {
       case "vendo":
         return "bg-blue-100 text-blue-800 border-blue-200";
-      case "busco":
+      case "compro":
         return "bg-purple-100 text-purple-800 border-purple-200";
-      case "oferta":
+      case "alquilo":
         return "bg-green-100 text-green-800 border-green-200";
+      case "busco_alquiler":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "oferta":
+        return "bg-red-100 text-red-800 border-red-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case "vendo":
+        return "VENTA";
+      case "compro":
+        return "COMPRA";
+      case "alquilo":
+        return "ALQUILER";
+      case "busco_alquiler":
+        return "BUSCO ALQUILER";
+      case "oferta":
+        return "OFERTA";
+      default:
+        return type.toUpperCase();
     }
   };
 
@@ -135,10 +161,22 @@ export default function Utensilios() {
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="vendo">Vendo</SelectItem>
-              <SelectItem value="busco">Busco</SelectItem>
-              <SelectItem value="oferta">Oferta</SelectItem>
+              <SelectItem value="todos">Todos los tipos</SelectItem>
+              <SelectItem value="venta">Venta</SelectItem>
+              <SelectItem value="compra">Compra</SelectItem>
+              <SelectItem value="alquiler">Alquiler</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={subcategoryFilter} onValueChange={setSubcategoryFilter}>
+            <SelectTrigger className="w-auto min-w-40">
+              <SelectValue placeholder="Subcategoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas las subcategorías</SelectItem>
+              {cfg.subcategories.map(sc => (
+                <SelectItem key={sc} value={sc.toLowerCase()}>{sc}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -193,6 +231,7 @@ export default function Utensilios() {
                 setLocationFilter("todos");
                 setConditionFilter("todos");
                 setTypeFilter("todos");
+                setSubcategoryFilter("todos");
               }}
               className="gap-2 text-muted-foreground hover:text-foreground"
             >
@@ -228,21 +267,52 @@ export default function Utensilios() {
                   <div className="p-4 space-y-3">
                     {/* Header */}
                     <div className="flex items-start justify-between">
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className={getTypeColor(anuncio.tipo)}>
-                          {anuncio.tipo.toUpperCase()}
-                        </Badge>
-                        {anuncio.estado_producto && (
-                          <Badge variant="secondary" className="text-xs">
-                            {anuncio.estado_producto}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <Badge variant="outline" className={`${getTypeColor(anuncio.tipo)} font-semibold text-xs`}>
+                            {getTypeLabel(anuncio.tipo)}
                           </Badge>
+                          {anuncio.estado_producto && (
+                            <Badge variant="outline" className="text-xs">
+                              {humanizeLabel(anuncio.estado_producto)}
+                            </Badge>
+                          )}
+                        </div>
+                        {/* Provider badge */}
+                        {anuncio.actor_type === 'provider' && anuncio.provider_info && (
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
+                              <span className="mr-1">⭐</span>
+                              {anuncio.provider_info.verified ? 'Proveedor Verificado' : 'Proveedor'}
+                            </Badge>
+                            {anuncio.provider_info.rating && (
+                              <span className="text-xs text-gray-500">
+                                {anuncio.provider_info.rating.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
-                      {anuncio.precio && (
-                        <div className="text-lg font-bold text-primary">
-                          €{parseInt(anuncio.precio).toLocaleString()}
-                        </div>
-                      )}
+                      <div className="text-right">
+                        {anuncio.precio && (
+                          <div className="text-lg font-bold text-primary">
+                            €{parseInt(anuncio.precio).toLocaleString()}
+                          </div>
+                        )}
+                        {(anuncio.tipo === 'alquilo' || anuncio.tipo === 'busco_alquiler') && (
+                          <div className="text-sm text-muted-foreground">
+                            {anuncio.precio_alquiler_dia && (
+                              <div>€{anuncio.precio_alquiler_dia}/día</div>
+                            )}
+                            {anuncio.precio_alquiler_semana && (
+                              <div>€{anuncio.precio_alquiler_semana}/sem</div>
+                            )}
+                            {anuncio.precio_alquiler_mes && (
+                              <div>€{anuncio.precio_alquiler_mes}/mes</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Content */}
@@ -271,6 +341,44 @@ export default function Utensilios() {
                         <MapPin className="h-4 w-4" />
                         <span>{anuncio.ubicacion.city}, {anuncio.ubicacion.region}</span>
                       </div>
+
+                      {/* Provider info */}
+                      {anuncio.actor_type === 'provider' && anuncio.provider_info && (
+                        <div 
+                          className="flex items-center gap-2 text-sm p-2 bg-yellow-50 rounded-lg border border-yellow-200 cursor-pointer hover:bg-yellow-100 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/platform/proveedor/${anuncio.provider_id}`);
+                          }}
+                        >
+                          <div className="w-6 h-6 bg-yellow-200 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-yellow-700">
+                              {anuncio.provider_info.name[0]}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-yellow-800">
+                                {anuncio.provider_info.name}
+                              </span>
+                              {anuncio.provider_info.verified && (
+                                <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center">
+                                  <span className="text-green-600 text-xs">✓</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-yellow-700">
+                              {anuncio.provider_info.rating && (
+                                <span>★ {anuncio.provider_info.rating.toFixed(1)}</span>
+                              )}
+                              {anuncio.provider_info.total_sales > 0 && (
+                                <span>• {anuncio.provider_info.total_sales} ventas</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-xs text-yellow-600">Ver perfil →</div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Footer */}

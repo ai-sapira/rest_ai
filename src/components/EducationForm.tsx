@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +35,36 @@ export function EducationForm({
   });
   
   const [loading, setLoading] = useState(false);
+
+  // Sync when opening: preload data for edit or clear for create
+  useEffect(() => {
+    const toDateInput = (value?: string) => (value ? value.substring(0, 10) : '');
+    if (isOpen) {
+      if (initialData) {
+        setFormData({
+          institution_name: initialData.institution_name || '',
+          degree_title: initialData.degree_title || '',
+          field_of_study: initialData.field_of_study || '',
+          start_date: toDateInput(initialData.start_date),
+          end_date: initialData.is_current ? '' : toDateInput(initialData.end_date),
+          description: initialData.description || '',
+          is_current: initialData.is_current || false,
+          certification_type: initialData.certification_type || 'degree',
+        });
+      } else {
+        setFormData({
+          institution_name: '',
+          degree_title: '',
+          field_of_study: '',
+          start_date: '',
+          end_date: '',
+          description: '',
+          is_current: false,
+          certification_type: 'degree',
+        });
+      }
+    }
+  }, [isOpen, initialData]);
 
   const certificationTypes = [
     { value: 'degree', label: 'Título Universitario' },
@@ -80,6 +110,7 @@ export function EducationForm({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>Añade o edita tu formación y certificaciones.</DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">

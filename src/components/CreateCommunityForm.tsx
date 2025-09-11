@@ -54,7 +54,7 @@ export function CreateCommunityForm({ isOpen, onClose, onSuccess }: CreateCommun
   const [completedSections, setCompletedSections] = useState<Set<number>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  console.log('CreateCommunityForm renderizado con isOpen:', isOpen);
+  // Debug log removed to reduce console noise
 
   // Progress calculation
   const totalSections = 4;

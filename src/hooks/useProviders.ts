@@ -83,9 +83,9 @@ export function useProviders() {
         .from('providers')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+      if (error) throw error;
       setMyProvider(data || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching provider profile');
@@ -155,10 +155,10 @@ export function useProviders() {
         .from('providers')
         .select('*')
         .eq('id', providerId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return data || null;
     } catch (err) {
       console.error('Error fetching provider:', err);
       return null;
@@ -172,9 +172,9 @@ export function useProviders() {
         .from('providers')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+      if (error) throw error;
       return data || null;
     } catch (err) {
       console.error('Error fetching provider by user ID:', err);

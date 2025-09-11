@@ -195,13 +195,28 @@ export function useProfile(userId?: string) {
     }
 
     try {
+      // Normalize optional fields to avoid empty strings being sent to PostgREST
+      const normalizedInsert: Record<string, any> = {
+        user_id: user.id,
+        company_name: data.company_name,
+        position_title: data.position_title,
+        start_date: data.start_date,
+        is_current: data.is_current,
+        display_order: workExperiences.length,
+      };
+      if (data.location && data.location.trim() !== '') {
+        normalizedInsert.location = data.location;
+      }
+      if (!data.is_current && data.end_date && data.end_date.trim() !== '') {
+        normalizedInsert.end_date = data.end_date;
+      }
+      if (data.description && data.description.trim() !== '') {
+        normalizedInsert.description = data.description;
+      }
+
       const { error } = await supabase
         .from('work_experiences')
-        .insert([{
-          user_id: user.id,
-          ...data,
-          display_order: workExperiences.length
-        }]);
+        .insert([normalizedInsert]);
 
       if (error) throw error;
 
@@ -216,9 +231,33 @@ export function useProfile(userId?: string) {
   // Update work experience
   const updateWorkExperience = async (id: string, data: Partial<CreateWorkExperienceData>): Promise<boolean> => {
     try {
+      // Allow clearing fields and ensure proper nulls for DB where applicable
+      const normalizedUpdate: Record<string, any> = {};
+      if (typeof data.company_name !== 'undefined') normalizedUpdate.company_name = data.company_name;
+      if (typeof data.position_title !== 'undefined') normalizedUpdate.position_title = data.position_title;
+      if (typeof data.start_date !== 'undefined') normalizedUpdate.start_date = data.start_date;
+      if (typeof data.is_current !== 'undefined') normalizedUpdate.is_current = data.is_current;
+
+      if (typeof data.location !== 'undefined') {
+        normalizedUpdate.location = data.location && data.location.trim() !== '' ? data.location : null;
+      }
+
+      if (typeof data.description !== 'undefined') {
+        normalizedUpdate.description = data.description && data.description.trim() !== '' ? data.description : null;
+      }
+
+      if (typeof data.end_date !== 'undefined' || typeof data.is_current !== 'undefined') {
+        // If is_current true, force end_date to null; else keep provided value or null if empty
+        if (data.is_current === true) {
+          normalizedUpdate.end_date = null;
+        } else if (typeof data.end_date !== 'undefined') {
+          normalizedUpdate.end_date = data.end_date && data.end_date.trim() !== '' ? data.end_date : null;
+        }
+      }
+
       const { error } = await supabase
         .from('work_experiences')
-        .update(data)
+        .update(normalizedUpdate)
         .eq('id', id);
 
       if (error) throw error;

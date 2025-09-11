@@ -68,7 +68,6 @@ const contractItems = [
 ];
 
 const footerItems = [
-  { title: "Perfil Proveedor", url: "/platform/perfil-proveedor", icon: Star },
   { title: "Soporte", url: "/platform/soporte", icon: HelpCircle },
   { title: "Ajustes", url: "/platform/ajustes", icon: Settings },
 ];

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +33,34 @@ export function WorkExperienceForm({
   });
   
   const [loading, setLoading] = useState(false);
+
+  // Ensure form is populated when opening for edit, and cleared for create
+  useEffect(() => {
+    const toDateInput = (value?: string) => (value ? value.substring(0, 10) : '');
+    if (isOpen) {
+      if (initialData) {
+        setFormData({
+          company_name: initialData.company_name || '',
+          position_title: initialData.position_title || '',
+          location: initialData.location || '',
+          start_date: toDateInput(initialData.start_date),
+          end_date: initialData.is_current ? '' : toDateInput(initialData.end_date),
+          description: initialData.description || '',
+          is_current: initialData.is_current || false,
+        });
+      } else {
+        setFormData({
+          company_name: '',
+          position_title: '',
+          location: '',
+          start_date: '',
+          end_date: '',
+          description: '',
+          is_current: false,
+        });
+      }
+    }
+  }, [isOpen, initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +98,7 @@ export function WorkExperienceForm({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>Añade los detalles de tu experiencia laboral.</DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
