@@ -62,7 +62,7 @@ export function usePosts(filters: UsePostsFilters = {}) {
   const [hasMore, setHasMore] = useState(true)
   const [lastFetchKey, setLastFetchKey] = useState<string>('')
   const [abortController, setAbortController] = useState<AbortController | null>(null)
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   const fetchPosts = useCallback(async (cursor?: string, replace = false) => {
     try {
@@ -106,8 +106,8 @@ export function usePosts(filters: UsePostsFilters = {}) {
         console.log('usePosts userCommunityIds:', userCommunityIds)
         // Note: We'll filter posts after fetching to avoid complex OR queries
       } else {
-        // If not authenticated, show only public posts (no community)
-        query = query.is('community_id', null)
+        // If not authenticated, allow all public posts regardless of community
+        // Previously restricted to community_id IS NULL, which hid most posts
       }
 
       // Apply filters
@@ -411,6 +411,7 @@ export function usePosts(filters: UsePostsFilters = {}) {
   }, [fetchPosts])
 
   useEffect(() => {
+    if (authLoading) return; // wait for auth to resolve to avoid wrong fetch key
     // Create a key based on the actual filtering criteria
     const currentFetchKey = JSON.stringify({
       userId: user?.id || null,
@@ -429,7 +430,7 @@ export function usePosts(filters: UsePostsFilters = {}) {
       setLoading(true);
       fetchPosts();
     }
-  }, [user?.id, filters.communityId, filters.topicId, filters.region, filters.limit, lastFetchKey, fetchPosts])
+  }, [authLoading, user?.id, filters.communityId, filters.topicId, filters.region, filters.limit, lastFetchKey, fetchPosts])
 
   return {
     posts,
