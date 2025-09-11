@@ -18,12 +18,13 @@ export function useCommunities() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAll = async () => {
+  const fetchAll = async (manageLoading: boolean = true) => {
     try {
-      setLoading(true);
+      if (manageLoading) setLoading(true);
       const { data, error } = await supabase
         .from("communities")
         .select("id, slug, name, description, hashtag, is_public, avatar_url, member_count")
+        .range(0, 49)
         .order("member_count", { ascending: false });
 
       if (error) throw error;
@@ -33,23 +34,21 @@ export function useCommunities() {
         community && self.findIndex(c => c?.id === community.id) === index
       ) as CommunityRow[];
       
-      console.log('fetchAll: Got', (data || []).length, 'total,', uniqueCommunities.length, 'unique communities');
       setAllCommunities(uniqueCommunities);
     } catch (e: any) {
       setError(e.message);
     } finally {
-      setLoading(false);
+      if (manageLoading) setLoading(false);
     }
   };
 
-  const fetchMine = async () => {
+  const fetchMine = async (manageLoading: boolean = true) => {
     try {
-      setLoading(true);
+      if (manageLoading) setLoading(true);
       
       // Get current user first
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) {
-        console.log('No authenticated user, clearing my communities');
         setMyCommunities([]);
         return;
       }
@@ -67,18 +66,23 @@ export function useCommunities() {
         community && self.findIndex(c => c?.id === community.id) === index
       );
       
-      console.log('fetchMine: Got', mapped.length, 'total,', uniqueCommunities.length, 'unique communities');
       setMyCommunities(uniqueCommunities);
     } catch (e: any) {
       setError(e.message);
     } finally {
-      setLoading(false);
+      if (manageLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAll();
-    fetchMine();
+    // Fetch in parallel but manage loading only once
+    setLoading(true);
+    Promise.all([
+      fetchAll(false),
+      fetchMine(false)
+    ])
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   return { allCommunities, myCommunities, loading, error, refetchAll: fetchAll, refetchMine: fetchMine };

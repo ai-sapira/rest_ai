@@ -127,24 +127,23 @@ export default function Community({
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
   const [isLinkedToAnnouncement, setIsLinkedToAnnouncement] = useState(false);
 
-  // Log when activeTab changes - refresh is handled automatically by usePosts
+  // Log when activeTab changes - remove noisy logs in production
   useEffect(() => {
-    console.log('Community component activeTab changed:', activeTab);
+    if (import.meta.env.DEV) {
+      console.log('Community component activeTab changed:', activeTab);
+    }
   }, [activeTab]);
 
-  // Debug communities loading
+  // Debug communities loading (dev only)
   useEffect(() => {
-    console.log('Communities debug:', {
-      allCommunities: allCommunities.length,
-      myCommunities: myCommunities.length,
-      communitiesLoading,
-      communitiesError,
-      allCommunitiesData: allCommunities.slice(0, 3) // Show first 3 for debugging
-    });
-    
-    // If there's an error, log it
-    if (communitiesError) {
-      console.error('Communities error:', communitiesError);
+    if (import.meta.env.DEV) {
+      console.log('Communities debug:', {
+        allCommunities: allCommunities.length,
+        myCommunities: myCommunities.length,
+        communitiesLoading,
+        communitiesError,
+        allCommunitiesData: allCommunities.slice(0, 3)
+      });
     }
   }, [allCommunities, myCommunities, communitiesLoading, communitiesError]);
 
