@@ -83,10 +83,17 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
   const handleSignOut = useCallback(async () => {
     try {
       await signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
+    } finally {
+      // Always navigate to login after local state reset
+      navigate('/platform/perfil');
+      // For SPA, a hard redirect ensures tokens are dropped in all tabs if needed
+      setTimeout(() => {
+        if (location.pathname !== '/platform/perfil') {
+          navigate('/platform/perfil');
+        }
+      }, 50);
     }
-  }, [signOut]);
+  }, [signOut, navigate, location.pathname]);
 
   const handleMessagesClick = useCallback(() => {
     navigate('/platform/mensajes');

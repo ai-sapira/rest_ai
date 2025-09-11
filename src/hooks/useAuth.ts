@@ -151,11 +151,22 @@ export function useAuth() {
   const signOut = async () => {
     try {
       setLoading(true)
-      const { error } = await supabase.auth.signOut()
+      const { error } = await supabase.auth.signOut({ scope: 'global' as any })
       // Hard reset local state regardless of network status
       setSession(null)
       setUser(null)
       setProfile(null)
+      // Best-effort: clear any persisted auth tokens
+      try {
+        localStorage.removeItem('supabase.auth.token')
+        // Remove any sb-* auth tokens if present
+        Object.keys(localStorage).forEach((k) => {
+          if (k.startsWith('sb-') && k.includes('-auth-token')) {
+            localStorage.removeItem(k)
+          }
+        })
+        sessionStorage.clear()
+      } catch (_) {}
       return { error }
     } finally {
       setLoading(false)
