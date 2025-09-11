@@ -68,7 +68,7 @@ export function usePosts(filters: UsePostsFilters = {}) {
     try {
       // Cancel previous request if exists
       if (abortController) {
-        abortController.abort();
+        try { abortController.abort(); } catch {}
       }
 
       // Create new abort controller
@@ -77,8 +77,8 @@ export function usePosts(filters: UsePostsFilters = {}) {
 
       // Add timeout to prevent hanging requests
       const timeoutId = setTimeout(() => {
-        newAbortController.abort();
-      }, 10000); // 10 second timeout
+        try { newAbortController.abort(); } catch {}
+      }, 6000); // 6s timeout to avoid hanging on prod
 
       // First get user's communities if authenticated
       let userCommunityIds: string[] = []
@@ -271,13 +271,13 @@ export function usePosts(filters: UsePostsFilters = {}) {
       clearTimeout(timeoutId);
       setAbortController(null);
       
-    } catch (error) {
+    } catch (error: any) {
       // Clear timeout
       clearTimeout(timeoutId);
       setAbortController(null);
       
       // Only log error if it's not an abort
-      if (error.name !== 'AbortError') {
+      if (error?.name !== 'AbortError') {
         console.error('Error fetching posts:', error)
       }
     } finally {

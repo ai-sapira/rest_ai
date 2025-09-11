@@ -338,7 +338,26 @@ export default function Community({
           <div className="flex-1 min-w-0">
             {/* Posts Feed */}
             <div className="space-y-3">
-              {filteredPosts.map((post) => (
+              {loading && filteredPosts.length === 0 && (
+                <>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Card key={`skeleton-${i}`} className="border border-gray-200 shadow-sm bg-white rounded-md overflow-hidden mb-3 animate-pulse">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="h-3 w-1/3 bg-gray-200 rounded" />
+                        <div className="h-4 w-5/6 bg-gray-200 rounded" />
+                        <div className="h-4 w-2/3 bg-gray-200 rounded" />
+                        <div className="h-40 w-full bg-gray-100 rounded" />
+                        <div className="flex gap-2">
+                          <div className="h-6 w-16 bg-gray-200 rounded" />
+                          <div className="h-6 w-20 bg-gray-200 rounded" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </>
+              )}
+
+              {!loading && filteredPosts.map((post) => (
                 <Card key={post.id} className="border border-gray-300 shadow-sm hover:shadow-md transition-all duration-200 bg-white hover:border-gray-400 rounded-md overflow-hidden mb-3">
                   <CardContent className="p-3 sm:p-4">
                     {/* Post Header */}
