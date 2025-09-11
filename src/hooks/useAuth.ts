@@ -21,15 +21,22 @@ export function useAuth() {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setSession(session)
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          fetchProfile(session.user.id)
+        } else {
+          setLoading(false)
+        }
+      })
+      .catch((err) => {
+        console.error('Error getting auth session:', err)
+        setSession(null)
+        setUser(null)
         setLoading(false)
-      }
-    })
+      })
 
     // Listen for auth changes
     const {
