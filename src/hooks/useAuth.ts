@@ -108,29 +108,58 @@ export function useAuth() {
   }
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
+    try {
+      setLoading(true)
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
         },
-      },
-    })
-    return { data, error }
+      })
+      if (!error && data?.user) {
+        setUser(data.user as unknown as User)
+        setSession(data.session as Session | null)
+        await fetchProfile((data.user as any).id)
+      }
+      return { data, error }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    return { data, error }
+    try {
+      setLoading(true)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (!error && data?.user) {
+        setUser(data.user as unknown as User)
+        setSession(data.session as Session | null)
+        await fetchProfile((data.user as any).id)
+      }
+      return { data, error }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    try {
+      setLoading(true)
+      const { error } = await supabase.auth.signOut()
+      // Hard reset local state regardless of network status
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+      return { error }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const updateProfile = async (updates: Partial<Profile>) => {
