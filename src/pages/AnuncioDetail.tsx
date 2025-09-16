@@ -57,7 +57,7 @@ export default function AnuncioDetail() {
       }
       setLoading(false);
     }
-  }, [id, anuncios, incrementViews]);
+  }, [id, anuncio, incrementViews]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
