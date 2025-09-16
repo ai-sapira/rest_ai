@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { pageTransitionVariants, cardVariants } from "@/hooks/useNavigationTransition";
 import { useAnuncios } from "@/hooks/useAnuncios";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -213,7 +215,13 @@ export default function MisAnuncios() {
   }
 
   return (
-    <main className="flex-1 p-6 space-y-6">
+    <motion.main 
+      className="flex-1 p-6 space-y-6"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransitionVariants}
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -333,6 +341,6 @@ export default function MisAnuncios() {
           )}
         </TabsContent>
       </Tabs>
-    </main>
+    </motion.main>
   );
 }

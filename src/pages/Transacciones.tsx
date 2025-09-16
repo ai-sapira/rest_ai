@@ -1,4 +1,6 @@
 import React from "react";
+import { motion } from "framer-motion";
+import { pageTransitionVariants } from "@/hooks/useNavigationTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -250,7 +252,13 @@ const TransactionsSummary = ({ transactions, title }: { transactions: any[], tit
 
 export default function Transacciones() {
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <motion.div 
+      className="container mx-auto p-6 space-y-6"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransitionVariants}
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Transacciones</h1>
@@ -310,6 +318,6 @@ export default function Transacciones() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </motion.div>
   );
 }

@@ -1,3 +1,5 @@
+import { motion } from "framer-motion";
+import { pageTransitionVariants } from "@/hooks/useNavigationTransition";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
@@ -6,13 +8,19 @@ import Footer from "@/components/Footer";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <motion.div 
+      className="min-h-screen bg-background"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransitionVariants}
+    >
       <Navbar />
       <Hero />
       <Features />
       <Categories />
       <Footer />
-    </div>
+    </motion.div>
   );
 };
 

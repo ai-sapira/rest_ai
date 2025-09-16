@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useAnuncios, type Anuncio } from "@/hooks/useAnuncios";
+import { useAnuncio, useAnunciosSimple, type Anuncio } from "@/hooks/useAnunciosSimple";
 import { useAuth } from "@/hooks/useAuth";
-import { useTransactions } from "@/hooks/useTransactions";
+import { useTransactionsSimple } from "@/hooks/useTransactionsSimple";
 import {
   ArrowLeft,
   MapPin,
@@ -39,9 +39,9 @@ import { OfferModal } from "@/components/OfferModal";
 export default function AnuncioDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { anuncios, incrementViews } = useAnuncios();
+  const { anuncio, loading: anuncioLoading } = useAnuncio(id!);
+  const { incrementViews } = useAnunciosSimple();
   const { user } = useAuth();
-  const [anuncio, setAnuncio] = useState<Anuncio | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);

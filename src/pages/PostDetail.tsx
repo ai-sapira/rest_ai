@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { useCommunities } from "@/hooks/useCommunities";
+import { useCommunitiesSimple } from "@/hooks/useCommunitiesSimple";
+import { usePost } from "@/hooks/usePostsSimple";
+import { motion } from "framer-motion";
+import { pageTransitionVariants } from "@/hooks/useNavigationTransition";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -87,88 +90,28 @@ export default function PostDetail() {
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { myCommunities } = useCommunities();
+  const { myCommunities } = useCommunitiesSimple();
   
-  const [post, setPost] = useState<Post | null>(null);
+  // ✅ Use optimized hook with robust error handling and like functionality
+  const { post, loading, error, toggleLike, isTogglingLike } = usePost(postId || '');
+  
   const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingComments, setLoadingComments] = useState(true);
   const [newComment, setNewComment] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
 
   useEffect(() => {
     if (postId) {
-      fetchPostDetails();
       fetchComments();
     }
   }, [postId]);
 
-  const fetchPostDetails = async () => {
-    if (!postId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          communities!community_id (name, slug),
-          post_media (url, media_type, width, height)
-        `)
-        .eq('id', postId)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        // Fetch profile data separately if actor is a user
-        if (data.actor_type === 'user' && data.actor_user_id) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url, restaurant_name')
-            .eq('user_id', data.actor_user_id)
-            .single();
-          
-          data.profiles = profileData;
-        }
-
-        // Fetch organization data separately if actor is an org
-        if (data.actor_type === 'org' && data.actor_org_id) {
-          const { data: orgData } = await supabase
-            .from('organizations')
-            .select('name, logo_url')
-            .eq('id', data.actor_org_id)
-            .single();
-          
-          data.organizations = orgData;
-        }
-
-        // Fetch user reactions if authenticated
-        if (user) {
-          const { data: reactions } = await supabase
-            .from('reactions')
-            .select('reaction_type')
-            .eq('user_id', user.id)
-            .eq('resource_type', 'post')
-            .eq('resource_id', postId);
-
-          setPost({
-            ...data,
-            user_reaction: reactions || []
-          });
-        } else {
-          setPost(data);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching post:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchComments = async () => {
     if (!postId) return;
 
     try {
+      setLoadingComments(true);
       const { data, error } = await supabase
         .from('comments')
         .select('*')
@@ -210,44 +153,16 @@ export default function PostDetail() {
       }
     } catch (error) {
       console.error('Error fetching comments:', error);
+    } finally {
+      setLoadingComments(false);
     }
   };
 
   const handleLike = async () => {
-    if (!user || !post) return;
-
-    try {
-      const hasLiked = post.user_reaction?.length > 0;
-
-      if (hasLiked) {
-        // Remove like
-        await supabase
-          .from('reactions')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('resource_type', 'post')
-          .eq('resource_id', post.id);
-      } else {
-        // Add like
-        await supabase
-          .from('reactions')
-          .insert({
-            user_id: user.id,
-            resource_type: 'post',
-            resource_id: post.id,
-            reaction_type: 'like'
-          });
-      }
-
-      // Update local state
-      setPost({
-        ...post,
-        likes_count: hasLiked ? Math.max(0, post.likes_count - 1) : post.likes_count + 1,
-        user_reaction: hasLiked ? [] : [{ reaction_type: 'like' }]
-      });
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
+    if (!user || !post || isTogglingLike) return;
+    
+    // ✅ FIXED: Use the robust toggleLike from usePost hook
+    toggleLike();
   };
 
   const handleJoinCommunity = async () => {
@@ -389,6 +304,21 @@ export default function PostDetail() {
     );
   }
 
+  if (error) {
+    return (
+      <main className="flex-1 p-6 font-body">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Error al cargar el post</h1>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => navigate(-1)} variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+        </div>
+      </main>
+    );
+  }
+
   if (!post) {
     return (
       <main className="flex-1 p-6 font-body">
@@ -404,7 +334,13 @@ export default function PostDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <motion.div 
+      className="min-h-screen bg-gray-50"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransitionVariants}
+    >
       {/* Reddit-style layout: Two columns */}
       <div className="max-w-7xl mx-auto flex gap-6 py-6 px-4">
         
@@ -728,7 +664,7 @@ export default function PostDetail() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

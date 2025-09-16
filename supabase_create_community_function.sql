@@ -66,3 +66,4 @@ GRANT EXECUTE ON FUNCTION create_community TO authenticated;
 
 -- Opcional: Si quieres que los usuarios anónimos también puedan crear comunidades
 -- GRANT EXECUTE ON FUNCTION create_community TO anon;
+

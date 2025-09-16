@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useAnuncios, type Anuncio } from "@/hooks/useAnuncios";
+import { useAnunciosSimple, type Anuncio } from "@/hooks/useAnunciosSimple";
 import {
   Select,
   SelectContent,
@@ -100,7 +100,7 @@ export default function Categorias() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   
   // Get real data from Supabase
-  const { anuncios, loading } = useAnuncios();
+  const { anuncios, loading } = useAnunciosSimple();
   
   // Get dynamic category summaries based on real data
   const categorySummaries = getCategorySummaries(anuncios);

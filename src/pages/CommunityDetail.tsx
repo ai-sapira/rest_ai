@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useCommunities } from "@/hooks/useCommunities";
-import { usePosts } from "@/hooks/usePosts";
+import { useCommunity } from "@/hooks/useCommunitiesSimple";
+import { usePostsSimple } from "@/hooks/usePostsSimple";
 import { supabase } from "@/lib/supabase";
 import {
   Users,
@@ -41,8 +41,16 @@ export default function CommunityDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [community, setCommunity] = useState<CommunityMeta | null>(null);
-  const [loadingCommunity, setLoadingCommunity] = useState<boolean>(true);
+  // ✅ Use optimized hook for community data
+  const { 
+    community, 
+    loading: loadingCommunity, 
+    isUserMember, 
+    userRole, 
+    isUserAdmin 
+  } = useCommunity(slug!);
+
+  const [loadingCommunityBackup, setLoadingCommunityBackup] = useState<boolean>(true);
   const [rules, setRules] = useState<Array<{ id: string | number; title: string; description?: string }>>([]);
   const [isEditingRules, setIsEditingRules] = useState<boolean>(false);
   const [savingRuleIds, setSavingRuleIds] = useState<Set<string | number>>(new Set());

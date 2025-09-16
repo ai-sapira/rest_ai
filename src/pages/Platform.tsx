@@ -1,4 +1,6 @@
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { pageTransitionVariants } from "@/hooks/useNavigationTransition";
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { PlatformNavbar } from "@/components/PlatformNavbar";
@@ -35,7 +37,7 @@ import Explorar from "./Explorar";
 import ProviderProfile from "./ProviderProfile";
 import CommunityDetail from "./CommunityDetail";
 import { CreateCommunityForm } from "@/components/CreateCommunityForm";
-import { useCommunities } from "@/hooks/useCommunities";
+import { useCommunitiesSimple } from "@/hooks/useCommunitiesSimple";
 
 import { 
   TrendingUp, 
@@ -277,7 +279,7 @@ export default function Platform() {
   const [isCreateCommunityModalOpen, setIsCreateCommunityModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("recientes");
   const { user, loading } = useAuth();
-  const { refetchAll, refetchMine } = useCommunities();
+  const { refetchAll, refetchMine } = useCommunitiesSimple();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -335,7 +337,13 @@ export default function Platform() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col w-full bg-background">
+    <motion.div 
+      className="min-h-screen flex flex-col w-full bg-background"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransitionVariants}
+    >
       {/* Navbar at the top - FULL WIDTH */}
       <PlatformNavbar 
         onCreatePost={handleCreatePost}
@@ -347,7 +355,8 @@ export default function Platform() {
       <div className="flex flex-1">
         <AppSidebar onCreateCommunity={handleCreateCommunity} />
         <main className="flex-1 min-w-0 bg-background ml-60 pt-14">
-          <Routes>
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
             <Route path="/" element={<Dashboard />} />
             <Route 
               path="/comunidad" 
@@ -389,6 +398,7 @@ export default function Platform() {
             <Route path="/perfil" element={<Profile />} />
             <Route path="/*" element={<Dashboard />} />
             </Routes>
+          </AnimatePresence>
         </main>
       </div>
 
@@ -403,6 +413,6 @@ export default function Platform() {
           onSuccess={handleCommunityCreated}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

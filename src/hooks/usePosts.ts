@@ -54,6 +54,7 @@ interface UsePostsFilters {
   topicId?: number
   region?: string
   limit?: number
+  onlyUserCommunities?: boolean // For "Mi Red" tab
 }
 
 export function usePosts(filters: UsePostsFilters = {}) {
@@ -66,6 +67,8 @@ export function usePosts(filters: UsePostsFilters = {}) {
 
   const fetchPosts = useCallback(async (cursor?: string, replace = false) => {
     try {
+      console.log('🚀 usePosts: fetchPosts called with:', { cursor, replace, filters, user: !!user });
+      
       // Cancel previous request if exists
       if (abortController) {
         try { abortController.abort(); } catch {}
@@ -239,13 +242,15 @@ export function usePosts(filters: UsePostsFilters = {}) {
             user_reaction: reactionsMap.get(post.id) || []
           }))
 
-          // Filter posts based on user's community membership
-          if (user && userCommunityIds.length > 0) {
+          // ✅ FIXED: Filter posts based on user's community membership ONLY for "Mi Red" tab
+          if (filters.onlyUserCommunities && user && userCommunityIds.length > 0) {
             newPosts = newPosts.filter(post => {
               // Show posts with no community (general posts) OR posts from user's communities
               return !post.community_id || userCommunityIds.includes(post.community_id)
             })
             console.log(`usePosts: Filtered to ${newPosts.length} posts from user's communities`)
+          } else {
+            console.log('usePosts: Showing ALL public posts (no community filtering)')
           }
         }
         

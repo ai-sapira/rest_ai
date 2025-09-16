@@ -235,3 +235,4 @@ export function OfferModal({ isOpen, onClose, anuncio }: OfferModalProps) {
     </Dialog>
   );
 }
+

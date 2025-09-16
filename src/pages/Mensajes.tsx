@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { useTransactions } from "@/hooks/useTransactions";
+import { useTransactionsSimple } from "@/hooks/useTransactionsSimple";
 import { useMessages } from "@/hooks/useMessages";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
@@ -202,7 +202,7 @@ const MessageBubble = ({ message, isMe }: { message: any, isMe: boolean }) => (
 export default function Mensajes() {
   const location = useLocation();
   const { user } = useAuth();
-  const { transactions, offers } = useTransactions();
+  const { transactions, offers } = useTransactionsSimple();
   
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");

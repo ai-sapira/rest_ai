@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { pageTransitionVariants, cardVariants } from "@/hooks/useNavigationTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,7 +45,7 @@ import {
   ArrowRight,
   BarChart3
 } from "lucide-react";
-import { useCommunities } from "@/hooks/useCommunities";
+import { useCommunitiesSimple } from "@/hooks/useCommunitiesSimple";
 import { usePosts } from "@/hooks/usePosts";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -98,7 +100,7 @@ export default function Explorar() {
   const [selectedTopic, setSelectedTopic] = useState<string>("all"); // Topic filter state
   
   // Real data hooks
-  const { allCommunities, myCommunities, loading: communitiesLoading, refetchAll, refetchMine } = useCommunities();
+  const { allCommunities, myCommunities, loading: communitiesLoading, refetchAll, refetchMine } = useCommunitiesSimple();
   const { posts, loading: postsLoading } = usePosts();
 
   // Topic filters with categories for community filtering
@@ -381,7 +383,13 @@ export default function Explorar() {
   return (
     <>
       <style>{customStyles}</style>
-      <main className="flex-1 bg-white min-h-screen">
+      <motion.main 
+        className="flex-1 bg-white min-h-screen"
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        variants={pageTransitionVariants}
+      >
         <div className="max-w-7xl mx-auto">
         
 
@@ -650,7 +658,7 @@ export default function Explorar() {
           </div>
         </div>
       </div>
-      </main>
+      </motion.main>
     </>
   );
 }

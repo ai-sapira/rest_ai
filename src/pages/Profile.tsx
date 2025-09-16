@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { pageTransitionVariants, cardVariants } from "@/hooks/useNavigationTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfileSimple } from "@/hooks/useProfileSimple";
 import { useAuth } from "@/hooks/useAuth";
-import { useTransactions } from "@/hooks/useTransactions";
-import { useAnuncios } from "@/hooks/useAnuncios";
+import { useTransactionsSimple } from "@/hooks/useTransactionsSimple";
+import { useAnunciosSimple } from "@/hooks/useAnunciosSimple";
 import { WorkExperienceForm } from "@/components/WorkExperienceForm";
 import { EducationForm } from "@/components/EducationForm";
 import {
@@ -63,7 +65,7 @@ export default function Profile() {
     createEducation,
     updateEducation,
     deleteEducation
-  } = useProfile(userId);
+  } = useProfileSimple(userId);
 
   const {
     transactions,
@@ -71,13 +73,13 @@ export default function Profile() {
     loading: transactionsLoading,
     updateTransactionStatus,
     updateOfferStatus
-  } = useTransactions();
+  } = useTransactionsSimple();
 
   const { 
-    anuncios, 
+    misAnuncios: anuncios, 
     loading: anunciosLoading,
     deleteAnuncio
-  } = useAnuncios();
+  } = useAnunciosSimple();
 
   // Form states
   const [workExperienceForm, setWorkExperienceForm] = useState<{
@@ -93,7 +95,7 @@ export default function Profile() {
   const [educationForm, setEducationForm] = useState<{
     isOpen: boolean;
     editingItem?: any;
-    title: string;
+  title: string;
   }>({
     isOpen: false,
     editingItem: undefined,
@@ -350,7 +352,13 @@ export default function Profile() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <motion.div 
+      className="container mx-auto px-4 py-8"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransitionVariants}
+    >
       <div className="max-w-4xl mx-auto space-y-6">
         
         {/* Profile Header */}
@@ -570,7 +578,7 @@ export default function Profile() {
                   >
                     <Plus className="h-4 w-4" />
                     Añadir formación
-                  </Button>
+              </Button>
                 )}
               </CardHeader>
               <CardContent className="space-y-4">
@@ -613,14 +621,14 @@ export default function Profile() {
                               onClick={() => handleOpenEducationForm(edu)}
                             >
                               <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
+                        </Button>
+                        <Button 
                               variant="ghost" 
-                              size="sm"
+                          size="sm"
                               onClick={() => handleDeleteEducation(edu.id)}
-                            >
+                        >
                               <Trash2 className="h-4 w-4" />
-                            </Button>
+                        </Button>
                           </div>
                         )}
                       </div>
@@ -837,7 +845,7 @@ export default function Profile() {
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <Heart className="h-3 w-3" />
-                                  {anuncio.favoritos}
+                                  {anuncio.contactos}
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <MessageCircle className="h-3 w-3" />
@@ -998,6 +1006,6 @@ export default function Profile() {
         initialData={educationForm.editingItem}
         title={educationForm.title}
       />
-    </div>
+    </motion.div>
   );
 }

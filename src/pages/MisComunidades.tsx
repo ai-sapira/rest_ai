@@ -24,7 +24,7 @@ import {
   TrendingUp,
   Shield
 } from "lucide-react";
-import { useCommunities } from "@/hooks/useCommunities";
+import { useCommunitiesSimple } from "@/hooks/useCommunitiesSimple";
 import { useNavigate } from "react-router-dom";
 
 interface Community {
@@ -153,7 +153,7 @@ const categories = [
 ];
 
 export default function MisComunidades() {
-  const { myCommunities, loading } = useCommunities();
+  const { myCommunities, loading, leaveCommunity } = useCommunitiesSimple();
   const navigate = useNavigate();
 
   const [selectedTopic, setSelectedTopic] = useState<string>("all");
@@ -193,9 +193,11 @@ export default function MisComunidades() {
     ? mappedCommunities
     : mappedCommunities.filter(c => c.category === selectedTopic || c.tags.includes(selectedTopic));
 
-  const handleUnfollow = (communityId: string) => {
-    // This function is no longer needed as communities are managed by useCommunities
-    // setCommunities(communities.filter(community => community.id !== communityId));
+  const handleUnfollow = async (communityId: string) => {
+    const success = await leaveCommunity(communityId);
+    if (!success) {
+      alert('Error al dejar de seguir la comunidad');
+    }
   };
 
   const handleToggleNotifications = (communityId: string) => {

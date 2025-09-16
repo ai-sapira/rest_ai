@@ -485,3 +485,4 @@ export function PurchaseModal({ isOpen, onClose, anuncio }: PurchaseModalProps) 
     </Dialog>
   );
 }
+
