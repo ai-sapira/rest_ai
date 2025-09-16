@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { usePosts, type Post } from "@/hooks/usePosts";
+import { useNavigationTransition, pageTransitionVariants } from "@/hooks/useNavigationTransition";
+import { motion } from "framer-motion";
+import { usePostsSimple, type Post } from "@/hooks/usePostsSimple";
+import { PostsFeed } from "@/components/PostsFeed";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { useCommunities } from "@/hooks/useCommunities";
+import { useCommunitiesSimple } from "@/hooks/useCommunitiesSimple";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -58,24 +61,12 @@ import {
 //   Stack,
 // } from "@chakra-ui/react";
 import {
-  Heart,
-  MessageCircle,
-  Share2,
-  MapPin,
-  Clock,
   TrendingUp,
-  Users,
-  Star,
   PlusCircle,
   Image as ImageIcon,
-  MoreHorizontal,
   Hash,
-  ChevronRight,
   X,
   Tag,
-  BarChart3,
-  Upload,
-  Trash2,
   Plus
 } from "lucide-react";
 
@@ -99,53 +90,46 @@ export default function Community({
   onTabChange = () => {}
 }: CommunityProps) {
   const navigate = useNavigate();
+  const { navigateWithDelay } = useNavigationTransition();
   const { user } = useAuth();
   
   // Create filters based on activeTab
   const getFiltersFromTab = (tab: string) => {
     switch (tab) {
       case "recientes":
-        return {}; // Show all posts
+        return {}; // ✅ FIXED: Show ALL public posts
       case "popular":
         return {}; // For now, same as recientes - we can add sorting later
       case "area":
         return { region: user?.user_metadata?.region }; // Filter by user's region
       case "red":
-        return {}; // Show only posts from user's communities - handled in usePosts logic
+        return { onlyUserCommunities: true }; // ✅ FIXED: Only posts from user's communities
       default:
         return {};
     }
   };
   
-  const { posts, loading, createPost, toggleLike, loadMore, hasMore, refresh } = usePosts(getFiltersFromTab(activeTab));
-  const { allCommunities, myCommunities, loading: communitiesLoading, error: communitiesError, refetchAll, refetchMine } = useCommunities();
+  const { 
+    posts, 
+    loading, 
+    createPost, 
+    toggleLike, 
+    loadMore, 
+    hasMore, 
+    refresh,
+    error,
+    isCreatingPost,
+    isLoadingMore 
+  } = usePostsSimple(getFiltersFromTab(activeTab));
+  const { allCommunities, myCommunities, loading: communitiesLoading, error: communitiesError, refetchAll, refetchMine } = useCommunitiesSimple();
   
-  // Create Post State
+  // ✅ CLEANED: Create Post State (removed isSubmittingPost - now using isCreatingPost from hook)
   const [newPostContent, setNewPostContent] = useState("");
   const [selectedCommunityId, setSelectedCommunityId] = useState<string>("general");
   const [newPostImage, setNewPostImage] = useState<string | null>(null);
-  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
   const [isLinkedToAnnouncement, setIsLinkedToAnnouncement] = useState(false);
 
-  // Log when activeTab changes - remove noisy logs in production
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('Community component activeTab changed:', activeTab);
-    }
-  }, [activeTab]);
-
-  // Debug communities loading (dev only)
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('Communities debug:', {
-        allCommunities: allCommunities.length,
-        myCommunities: myCommunities.length,
-        communitiesLoading,
-        communitiesError,
-        allCommunitiesData: allCommunities.slice(0, 3)
-      });
-    }
-  }, [allCommunities, myCommunities, communitiesLoading, communitiesError]);
+  // ✅ CLEANED: Removed noisy debug logs - usePostsSimple has better debugging
 
   // Mock communities for fallback display (temporary for debugging)
   const mockCommunities = [
@@ -226,19 +210,13 @@ export default function Community({
     }
   };
 
-  const loadMorePosts = () => {
-    loadMore();
-  };
 
-  // Create Post Functions
+  // ✅ SIMPLIFIED: Create Post Function with better error handling
   const handleCreatePost = async () => {
     if (!newPostContent.trim() || !user) {
       console.log('Missing content or user', { content: newPostContent.trim(), user: !!user });
       return;
     }
-
-    console.log('Starting post creation...');
-    setIsSubmittingPost(true);
 
     try {
       let communityId = selectedCommunityId;
@@ -253,7 +231,6 @@ export default function Community({
         
         if (communityError) {
           console.error('Error fetching general community:', communityError);
-          // Set to null for general posts
           communityId = null;
         } else if (generalCommunity?.id) {
           communityId = generalCommunity.id;
@@ -262,8 +239,6 @@ export default function Community({
         }
       }
 
-      console.log('Final communityId:', communityId);
-
       const result = await createPost({
         content: newPostContent,
         actorType: 'user',
@@ -271,27 +246,22 @@ export default function Community({
         communityId: communityId || undefined
       });
 
-      console.log('Create post result:', result);
-
       if (result.error) {
         console.error('Failed to create post:', result.error);
         alert('Error al crear el post. Por favor, inténtalo de nuevo.');
         return;
       }
 
-      // Reset form only if successful
+      // ✅ Reset form only if successful
       setNewPostContent("");
       setSelectedCommunityId("general");
       setNewPostImage(null);
       setIsLinkedToAnnouncement(false);
       setIsCreatePostModalOpen(false);
       
-      console.log('Post created successfully!');
     } catch (error) {
       console.error('Error creating post:', error);
       alert('Error inesperado al crear el post. Por favor, inténtalo de nuevo.');
-    } finally {
-      setIsSubmittingPost(false);
     }
   };
 
@@ -317,8 +287,7 @@ export default function Community({
   };
 
 
-  // Show all posts since there's no search functionality
-  const filteredPosts = posts;
+  // ✅ CLEANED: Removed filteredPosts and debug useEffect - usePostsSimple handles this better
 
   const formatNumber = (num: number) => {
     if (num >= 1000) {
@@ -328,162 +297,32 @@ export default function Community({
   };
 
   return (
-    <>
+    <motion.div
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransitionVariants}
+    >
       {/* Main Container - Reddit Style Layout */}
       <div className="min-h-screen bg-gray-50">
         {/* Content Container - optimized for Reddit-style layout */}
         <div className="max-w-[1200px] mx-auto flex gap-6 pt-20 px-4 lg:px-6">
           
-          {/* Main Content Column - Posts Feed */}
+          {/* ✅ MODULAR: Main Content Column - Posts Feed */}
           <div className="flex-1 min-w-0">
-            {/* Posts Feed */}
-            <div className="space-y-3">
-              {loading && filteredPosts.length === 0 && (
-                <>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Card key={`skeleton-${i}`} className="border border-gray-200 shadow-sm bg-white rounded-md overflow-hidden mb-3 animate-pulse">
-                      <CardContent className="p-4 space-y-3">
-                        <div className="h-3 w-1/3 bg-gray-200 rounded" />
-                        <div className="h-4 w-5/6 bg-gray-200 rounded" />
-                        <div className="h-4 w-2/3 bg-gray-200 rounded" />
-                        <div className="h-40 w-full bg-gray-100 rounded" />
-                        <div className="flex gap-2">
-                          <div className="h-6 w-16 bg-gray-200 rounded" />
-                          <div className="h-6 w-20 bg-gray-200 rounded" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </>
-              )}
-
-              {!loading && filteredPosts.map((post) => (
-                <Card key={post.id} className="border border-gray-300 shadow-sm hover:shadow-md transition-all duration-200 bg-white hover:border-gray-400 rounded-md overflow-hidden mb-3">
-                  <CardContent className="p-3 sm:p-4">
-                    {/* Post Header */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {post.communities && (
-                          <>
-                            <span className="font-semibold text-primary hover:underline cursor-pointer text-xs">
-                              r/{post.communities.slug}
-                            </span>
-                            <span className="text-muted-foreground/60">•</span>
-                          </>
-                        )}
-                        <span className="text-xs">por</span>
-                        <span className="font-medium text-foreground hover:underline cursor-pointer text-xs">
-                          u/{post.actor_type === 'user' ? post.profiles?.full_name?.replace(' ', '') : post.organizations?.name?.replace(' ', '')}
-                        </span>
-                        <span className="text-muted-foreground/60">•</span>
-                        <span className="text-xs">{new Date(post.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreHorizontal className="h-3 w-3" />
-                      </Button>
-                    </div>
-
-                    {/* Post Content */}
-                    <div
-                      className="cursor-pointer group"
-                      onClick={() => navigate(`/platform/post/${post.id}`)}
-                    >
-                      <div className="text-sm leading-relaxed text-foreground mb-3 group-hover:text-primary transition-colors">
-                        {post.content}
-                      </div>
-
-                      {/* Post Images */}
-                      {post.post_media && post.post_media.length > 0 && (
-                        <div className="rounded-lg overflow-hidden border border-border mb-3">
-                          {post.post_media.map((media, index) => (
-                            <img
-                              key={index}
-                              src={media.url}
-                              alt="Post content"
-                              className="w-full h-auto max-h-96 object-cover"
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-1 pt-2 border-t border-border/50">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`gap-1.5 h-8 px-3 text-xs hover:bg-muted/50 ${
-                          post.user_reaction?.length ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleLike(post.id);
-                        }}
-                      >
-                        <Heart className={`h-3.5 w-3.5 ${post.user_reaction?.length ? 'fill-current' : ''}`} />
-                        <span className="font-medium">{formatNumber(post.likes_count)}</span>
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1.5 h-8 px-3 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/platform/post/${post.id}`);
-                        }}
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                        <span className="font-medium">{formatNumber(post.comments_count)}</span>
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1.5 h-8 px-3 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          /* TODO: Share functionality */
-                        }}
-                      >
-                        <Share2 className="h-3.5 w-3.5" />
-                        <span className="font-medium">Compartir</span>
-                      </Button>
-
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {/* Load More Button */}
-              {hasMore && (
-                <div className="flex justify-center pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={loadMorePosts}
-                    disabled={loading}
-                    className="px-6 py-2 text-sm font-medium border-border hover:bg-muted/50"
-                  >
-                    {loading ? "Cargando..." : "Cargar más"}
-                  </Button>
-                </div>
-              )}
-
-              {/* Empty State */}
-              {!loading && posts.length === 0 && (
-                <Card className="border-dashed border-2 border-border/50">
-                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="rounded-full bg-muted/50 p-3 mb-4">
-                      <MessageCircle className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground mb-2">No hay posts aún</h3>
-                    <p className="text-sm text-muted-foreground max-w-sm">
-                      Sé el primero en compartir algo con tu comunidad. ¡Empieza una conversación!
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            <PostsFeed
+              posts={posts}
+              loading={loading}
+              error={error}
+              hasMore={hasMore}
+              isLoadingMore={isLoadingMore}
+              activeTab={activeTab}
+              onLike={handleLike}
+              onLoadMore={loadMore}
+              onRefresh={refresh}
+              onCreatePost={() => setIsCreatePostModalOpen(true)}
+              formatNumber={formatNumber}
+            />
           </div>
 
           {/* Right Sidebar - Reddit Style */}
@@ -784,17 +623,17 @@ export default function Community({
                   )}
                 </div>
 
-                {/* Post Button - Enhanced */}
+                {/* ✅ ENHANCED: Post Button with better state management */}
                 <Button
                   onClick={handleCreatePost}
-                  disabled={!newPostContent.trim() || !user || isSubmittingPost || newPostContent.length > 500}
+                  disabled={!newPostContent.trim() || !user || isCreatingPost || newPostContent.length > 500}
                   className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${
-                    !newPostContent.trim() || !user || isSubmittingPost || newPostContent.length > 500
+                    !newPostContent.trim() || !user || isCreatingPost || newPostContent.length > 500
                       ? "bg-blue-300 text-white cursor-not-allowed hover:bg-blue-300"
                       : "bg-blue-500 hover:bg-blue-600 text-white shadow-sm hover:shadow-md scale-100 hover:scale-105 active:scale-95"
                   }`}
                 >
-                  {isSubmittingPost ? (
+                  {isCreatingPost ? (
                     <div className="flex items-center gap-2">
                       <div className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
                       Publicando...
@@ -809,6 +648,6 @@ export default function Community({
         </DialogContent>
       </Dialog>
 
-    </>
+    </motion.div>
   );
 }
