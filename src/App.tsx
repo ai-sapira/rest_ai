@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ChakraProvider } from "@chakra-ui/react";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { CommunitiesProvider } from "@/context/CommunitiesContext";
 import Index from "./pages/Index";
 import Platform from "./pages/Platform";
 import NotFound from "./pages/NotFound";
@@ -63,24 +64,26 @@ function RootRedirect() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <ChakraProvider>
-        <ThemeProvider defaultTheme="light" storageKey="lovable-ui-theme">
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<RootRedirect />} />
-                <Route path="/platform/*" element={<Platform />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-            {/* React Query DevTools - only in development */}
-            {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-          </TooltipProvider>
-        </ThemeProvider>
-      </ChakraProvider>
+      <CommunitiesProvider>
+        <ChakraProvider>
+          <ThemeProvider defaultTheme="light" storageKey="lovable-ui-theme">
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<RootRedirect />} />
+                  <Route path="/platform/*" element={<Platform />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+              {/* React Query DevTools - only in development */}
+              {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+            </TooltipProvider>
+          </ThemeProvider>
+        </ChakraProvider>
+      </CommunitiesProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

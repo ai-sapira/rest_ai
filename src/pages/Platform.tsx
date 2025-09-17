@@ -39,7 +39,7 @@ import ProviderProfile from "./ProviderProfile";
 import CommunityDetail from "./CommunityDetail";
 import UserDetail from "./UserDetail";
 import { CreateCommunityForm } from "@/components/CreateCommunityForm";
-import { useCommunities } from "@/hooks/useCommunities";
+// Communities are now managed globally via CommunitiesContext
 
 import { 
   TrendingUp, 
@@ -281,7 +281,7 @@ export default function Platform() {
   const [isCreateCommunityModalOpen, setIsCreateCommunityModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("recientes");
   const { user, loading } = useAuth();
-  const { refresh } = useCommunities();
+  // Communities context is now global - no need to call here
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -306,8 +306,8 @@ export default function Platform() {
   };
 
   const handleCommunityCreated = () => {
-    // Refresh communities data after creating a new one
-    refresh();
+    // Communities will refresh automatically via context when new one is created
+    console.log('Community created - context will handle refresh');
   };
 
   // Reset activeTab to "recientes" when navigating to /comunidad from sidebar
