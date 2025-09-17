@@ -141,30 +141,7 @@ export default function Community({
   const [newPostImage, setNewPostImage] = useState<string | null>(null);
   const [isLinkedToAnnouncement, setIsLinkedToAnnouncement] = useState(false);
   
-  // ✅ DEMO MODE: Fast reload for predictable loading experience
-  const [hasLoadingTimeout, setHasLoadingTimeout] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
-
-  // Loading timeout - retry data fetch instead of page reload
-  useEffect(() => {
-    if (communitiesLoading && !hasLoadingTimeout) {
-      timeoutRef.current = setTimeout(() => {
-        console.log('🔄 Loading timeout: Retrying data fetch');
-        setHasLoadingTimeout(true);
-        // Retry data fetch instead of page reload
-        refreshCommunities();
-      }, 3000); // 3 seconds timeout
-    } else if (!communitiesLoading && timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      setHasLoadingTimeout(false);
-    }
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [communitiesLoading, hasLoadingTimeout]);
+  // Remove loading timeout - let the hooks handle their own timeouts
 
   // ✅ CLEANED: Removed noisy debug logs - usePostsSimple has better debugging
 
@@ -331,22 +308,7 @@ export default function Community({
   };
 
 
-  // ✅ DEMO MODE: Elegant loading screen during fast reload
-  if (hasLoadingTimeout) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-lg font-medium text-gray-900 mb-2">
-            Optimizando experiencia...
-          </div>
-          <div className="text-sm text-gray-600">
-            Cargando en un momento
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Removed loading timeout logic - hooks handle their own loading states
 
   return (
     <motion.div

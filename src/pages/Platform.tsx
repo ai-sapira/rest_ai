@@ -323,8 +323,13 @@ export default function Platform() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span className="text-white font-bold text-2xl">H</span>
+          <div className="flex items-center justify-center gap-2 mb-6 animate-pulse">
+            <img 
+              src="/Guia_Repsol.svg" 
+              alt="Guía Repsol" 
+              className="h-12 w-auto"
+            />
+            <span className="font-medium text-2xl text-orange-600 italic">community</span>
           </div>
           <p className="text-gray-600">Verificando sesión...</p>
         </div>

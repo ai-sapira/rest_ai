@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { communitiesService, type Community } from '@/services/communities.service';
 
@@ -9,6 +9,7 @@ export function useCommunities() {
   const [allCommunities, setAllCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout>();
 
   // 🔍 DEEP DEBUG: Track all state changes
   console.log('🔍 useCommunities STATE:', {
@@ -53,7 +54,7 @@ export function useCommunities() {
     }
   };
 
-  // Refresh both lists
+  // Refresh both lists with debounce to prevent multiple calls
   const refresh = async () => {
     console.log('🔍 refresh CALLED - authLoading:', authLoading, 'user:', !!user);
     
@@ -61,20 +62,29 @@ export function useCommunities() {
       console.log('🔍 refresh: Auth still loading, skipping');
       return;
     }
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      console.log('🔍 refresh: Starting fetch...');
-      await Promise.all([
-        fetchUserCommunities(),
-        fetchAllCommunities(),
-      ]);
-      console.log('🔍 refresh: Fetch completed');
-    } finally {
-      setLoading(false);
+
+    // Clear any existing timeout
+    if (refreshTimeoutRef.current) {
+      console.log('🔍 refresh: Cancelling previous refresh timeout');
+      clearTimeout(refreshTimeoutRef.current);
     }
+
+    // Debounce refresh calls
+    refreshTimeoutRef.current = setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        console.log('🔍 refresh: Starting fetch...');
+        await Promise.all([
+          fetchUserCommunities(),
+          fetchAllCommunities(),
+        ]);
+        console.log('🔍 refresh: Fetch completed');
+      } finally {
+        setLoading(false);
+      }
+    }, 100); // 100ms debounce
   };
 
   // Join a community
@@ -99,26 +109,26 @@ export function useCommunities() {
     return success;
   };
 
-  // Initial fetch when auth is ready
+  // Single useEffect that handles both auth state and initial mount
   useEffect(() => {
-    console.log('🔍 useEffect [authLoading, user?.id] TRIGGERED:', { authLoading, userId: user?.id });
+    console.log('🔍 useCommunities useEffect TRIGGERED:', { authLoading, userId: user?.id });
+    
+    // Only proceed if auth is not loading
     if (!authLoading) {
-      console.log('🔄 useCommunities: Auth ready, triggering refresh');
+      console.log('🔄 useCommunities: Auth ready, loading data');
       refresh();
     } else {
       console.log('🔄 useCommunities: Auth still loading, waiting...');
     }
-  }, [authLoading, user?.id]);
 
-  // Initial load when component mounts - single call only
-  useEffect(() => {
-    console.log('🔍 useCommunities: Component mounted');
-    // Only refresh if auth is already ready to avoid duplicate calls
-    if (!authLoading && user !== undefined) {
-      console.log('🔄 useCommunities: Auth ready on mount, loading data');
-      refresh();
-    }
-  }, []); // Run once on mount
+    // Cleanup function
+    return () => {
+      if (refreshTimeoutRef.current) {
+        console.log('🔍 useCommunities: Cleaning up refresh timeout');
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, [authLoading, user?.id]); // Will trigger on auth changes AND initial mount
 
   return {
     // Data
