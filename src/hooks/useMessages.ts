@@ -6,7 +6,9 @@ export interface TransactionMessage {
   id: string;
   transaction_id?: string;
   offer_id?: string;
+  anuncio_id?: string;
   sender_id: string;
+  receiver_id?: string;
   message: string;
   message_type: 'text' | 'image' | 'system';
   attachment_url?: string;
@@ -17,38 +19,56 @@ export interface TransactionMessage {
 export interface CreateMessageData {
   transaction_id?: string;
   offer_id?: string;
+  anuncio_id?: string;
+  receiver_id?: string;
   message: string;
   message_type?: 'text' | 'image' | 'system';
   attachment_url?: string;
 }
 
-export function useMessages(transactionId?: string, offerId?: string) {
+export function useMessages(transactionId?: string, offerId?: string, anuncioId?: string) {
   const [messages, setMessages] = useState<TransactionMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  // Fetch messages for a transaction or offer
+  // Fetch messages for a transaction, offer, or anuncio contact
   const fetchMessages = async () => {
-    if (!transactionId && !offerId) return;
+    if (!transactionId && !offerId && !anuncioId) return;
 
     try {
       setLoading(true);
-      let query = supabase
-        .from('transaction_messages')
-        .select('*')
-        .order('created_at', { ascending: true });
+      let messages: TransactionMessage[] = [];
 
-      if (transactionId) {
-        query = query.eq('transaction_id', transactionId);
-      } else if (offerId) {
-        query = query.eq('offer_id', offerId);
+      if (anuncioId) {
+        // Fetch contact messages
+        const { data, error } = await supabase
+          .from('contact_messages')
+          .select('*')
+          .eq('anuncio_id', anuncioId)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        messages = data || [];
+      } else {
+        // Fetch transaction/offer messages
+        let query = supabase
+          .from('transaction_messages')
+          .select('*')
+          .order('created_at', { ascending: true });
+
+        if (transactionId) {
+          query = query.eq('transaction_id', transactionId);
+        } else if (offerId) {
+          query = query.eq('offer_id', offerId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        messages = data || [];
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setMessages(data || []);
+      setMessages(messages);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching messages');
     } finally {
@@ -64,8 +84,9 @@ export function useMessages(transactionId?: string, offerId?: string) {
     }
 
     try {
+      const tableName = messageData.anuncio_id ? 'contact_messages' : 'transaction_messages';
       const { error } = await supabase
-        .from('transaction_messages')
+        .from(tableName)
         .insert([{
           ...messageData,
           sender_id: user.id
@@ -84,8 +105,9 @@ export function useMessages(transactionId?: string, offerId?: string) {
   // Mark messages as read
   const markAsRead = async (messageIds: string[]): Promise<boolean> => {
     try {
+      const tableName = anuncioId ? 'contact_messages' : 'transaction_messages';
       const { error } = await supabase
-        .from('transaction_messages')
+        .from(tableName)
         .update({ is_read: true })
         .in('id', messageIds)
         .neq('sender_id', user?.id); // Only mark messages from others as read
@@ -107,19 +129,28 @@ export function useMessages(transactionId?: string, offerId?: string) {
 
   // Set up real-time subscription
   useEffect(() => {
-    if (!transactionId && !offerId) return;
+    if (!transactionId && !offerId && !anuncioId) return;
+
+    const tableName = anuncioId ? 'contact_messages' : 'transaction_messages';
+    let filter = '';
+    
+    if (anuncioId) {
+      filter = `anuncio_id=eq.${anuncioId}`;
+    } else if (transactionId) {
+      filter = `transaction_id=eq.${transactionId}`;
+    } else if (offerId) {
+      filter = `offer_id=eq.${offerId}`;
+    }
 
     const channel = supabase
-      .channel('transaction_messages')
+      .channel(`${tableName}_${anuncioId || transactionId || offerId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'transaction_messages',
-          filter: transactionId 
-            ? `transaction_id=eq.${transactionId}`
-            : `offer_id=eq.${offerId}`
+          table: tableName,
+          filter
         },
         () => {
           fetchMessages();
@@ -130,11 +161,11 @@ export function useMessages(transactionId?: string, offerId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [transactionId, offerId]);
+  }, [transactionId, offerId, anuncioId]);
 
   useEffect(() => {
     fetchMessages();
-  }, [transactionId, offerId]);
+  }, [transactionId, offerId, anuncioId]);
 
   return {
     messages,

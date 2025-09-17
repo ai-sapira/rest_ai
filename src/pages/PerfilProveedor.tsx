@@ -561,12 +561,15 @@ export default function PerfilProveedor() {
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex gap-2">
                                   <Badge variant="outline" className={
-                                    anuncio.tipo === 'vendo' ? 'bg-blue-100 text-blue-800' :
-                                    anuncio.tipo === 'alquilo' ? 'bg-green-100 text-green-800' :
-                                    'bg-red-100 text-red-800'
+                                    anuncio.tipo === 'vendo' ? 'bg-repsol-blue/10 text-repsol-blue border-repsol-blue/20' :
+                                    anuncio.tipo === 'alquilo' ? 'bg-green-100 text-green-800 border-green-200' :
+                                    anuncio.tipo === 'busco_alquiler' ? 'bg-green-100 text-green-800 border-green-200' :
+                                    anuncio.tipo === 'oferta' || anuncio.tipo === 'busco_servicio' ? 'bg-repsol-orange/10 text-repsol-orange border-repsol-orange/20' :
+                                    'bg-purple-100 text-purple-800 border-purple-200'
                                   }>
                                     {anuncio.tipo === 'vendo' ? 'VENTA' :
-                                     anuncio.tipo === 'alquilo' ? 'ALQUILER' : 
+                                     anuncio.tipo === 'busco' ? 'COMPRA' :
+                                     anuncio.tipo === 'alquilo' || anuncio.tipo === 'busco_alquiler' ? 'ALQUILER' : 
                                      'SERVICIO'}
                                   </Badge>
                                   {anuncio.estado_producto && (

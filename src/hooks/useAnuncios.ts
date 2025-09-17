@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 export interface Anuncio {
   id: string;
   user_id: string;
-  tipo: 'vendo' | 'compro' | 'alquilo' | 'busco_alquiler' | 'oferta';
+  tipo: 'vendo' | 'compro' | 'alquilo' | 'busco_alquiler' | 'oferta' | 'busco_servicio';
   categoria: string;
   subcategoria: string;
   titulo: string;
@@ -68,7 +68,7 @@ export interface Anuncio {
 }
 
 export interface CreateAnuncioData {
-  tipo: 'vendo' | 'compro' | 'alquilo' | 'busco_alquiler' | 'oferta';
+  tipo: 'vendo' | 'compro' | 'alquilo' | 'busco_alquiler' | 'oferta' | 'busco_servicio';
   categoria: string;
   subcategoria: string;
   titulo: string;
@@ -178,6 +178,11 @@ export function useAnuncios() {
     }
 
     try {
+      console.log('🚀 useAnuncios: Inserting data:', JSON.stringify({
+        ...anuncioData,
+        user_id: user.id
+      }, null, 2));
+
       const { data, error } = await supabase
         .from('anuncios')
         .insert([{
@@ -187,13 +192,24 @@ export function useAnuncios() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        console.error('❌ Error details:', JSON.stringify(error, null, 2));
+        throw error;
+      }
+
+      console.log('✅ Success! Created anuncio:', data);
 
       // Refresh mis anuncios
       await fetchMisAnuncios();
       
       return data;
     } catch (err) {
+      console.error('💥 createAnuncio error:', err);
+      console.error('💥 Error code:', err?.code);
+      console.error('💥 Error message:', err?.message);
+      console.error('💥 Error details:', err?.details);
+      console.error('💥 Error hint:', err?.hint);
       setError(err instanceof Error ? err.message : 'Error creating anuncio');
       return null;
     }

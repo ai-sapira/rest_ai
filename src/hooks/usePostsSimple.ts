@@ -271,8 +271,8 @@ export function usePostsSimple(filters: UsePostsFilters = {}) {
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: true, // Always enabled, but conditional logic inside
-    staleTime: 0, // ✅ CRITICAL: NO CACHE - Always fetch fresh 
-    gcTime: 0, // ✅ CRITICAL: NO CACHE - Immediate cleanup
+    staleTime: 2 * 60 * 1000, // Cache data for 2 minutes to prevent excessive refetches
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     retry: (failureCount, error) => {
       console.error(`❌ usePostsSimple: Query failed (attempt ${failureCount}):`, error);
       return failureCount < 2; // ✅ CRITICAL: Reduced retries to fail faster

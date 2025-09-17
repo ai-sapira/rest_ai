@@ -25,17 +25,24 @@ import {
   X,
   Image as ImageIcon,
   Camera,
-  AlertTriangle
+  AlertTriangle,
+  Calendar,
+  Search,
+  Star,
+  ShoppingCart
 } from "lucide-react";
 
 interface FormData {
-  tipo: 'vendo' | 'busco' | 'oferta' | null;
+  tipo: 'vendo' | 'busco' | 'oferta' | 'alquilo' | 'busco_alquiler' | 'busco_servicio' | null;
   categoria: string;
   subcategoria: string;
   titulo: string;
   descripcion: string;
   estado_producto: string;
   precio: string;
+  precio_alquiler_dia: string;
+  precio_alquiler_semana: string;
+  precio_alquiler_mes: string;
   moneda: string;
   dimensiones: {
     width: string;
@@ -109,6 +116,9 @@ export default function AnuncioEdit() {
     descripcion: '',
     estado_producto: '',
     precio: '',
+    precio_alquiler_dia: '',
+    precio_alquiler_semana: '',
+    precio_alquiler_mes: '',
     moneda: 'EUR',
     dimensiones: { width: '', height: '', depth: '' },
     ubicacion: { region: '', province: '', city: '' },
@@ -164,6 +174,9 @@ export default function AnuncioEdit() {
           descripcion: data.descripcion,
           estado_producto: data.estado_producto,
           precio: data.precio?.toString() || '',
+          precio_alquiler_dia: data.precio_alquiler_dia?.toString() || '',
+          precio_alquiler_semana: data.precio_alquiler_semana?.toString() || '',
+          precio_alquiler_mes: data.precio_alquiler_mes?.toString() || '',
           moneda: data.moneda,
           dimensiones: {
             width: data.dimensiones?.width || '',
@@ -201,7 +214,20 @@ export default function AnuncioEdit() {
       case 2: // Información básica
         return !!(formData.titulo && formData.descripcion && formData.subcategoria);
       case 3: // Detalles del producto
-        return !!(formData.estado_producto && (formData.tipo === 'busco' || formData.precio));
+        if (formData.tipo === 'busco' || formData.tipo === 'busco_servicio') {
+          return !!formData.estado_producto;
+        }
+        if (formData.tipo === 'alquilo') {
+          return !!(formData.estado_producto && (
+            formData.precio_alquiler_dia || 
+            formData.precio_alquiler_semana || 
+            formData.precio_alquiler_mes
+          ));
+        }
+        if (formData.tipo === 'busco_alquiler') {
+          return !!(formData.estado_producto && formData.precio_alquiler_mes);
+        }
+        return !!(formData.estado_producto && formData.precio);
       case 4: // Fotos
         return true; // Always complete for editing
       case 5: // Ubicación
@@ -277,13 +303,16 @@ export default function AnuncioEdit() {
       
       // Transform form data to match the database schema
       const updateData = {
-        tipo: formData.tipo as 'vendo' | 'busco' | 'oferta',
+        tipo: formData.tipo as 'vendo' | 'busco' | 'oferta' | 'alquilo' | 'busco_alquiler' | 'busco_servicio',
         categoria: formData.categoria,
         subcategoria: formData.subcategoria,
         titulo: formData.titulo,
         descripcion: formData.descripcion,
         estado_producto: formData.estado_producto,
         precio: formData.precio ? parseFloat(formData.precio) : undefined,
+        precio_alquiler_dia: formData.precio_alquiler_dia ? parseFloat(formData.precio_alquiler_dia) : undefined,
+        precio_alquiler_semana: formData.precio_alquiler_semana ? parseFloat(formData.precio_alquiler_semana) : undefined,
+        precio_alquiler_mes: formData.precio_alquiler_mes ? parseFloat(formData.precio_alquiler_mes) : undefined,
         moneda: formData.moneda,
         dimensiones: {
           width: formData.dimensiones.width,
@@ -434,11 +463,14 @@ export default function AnuncioEdit() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
-                  { id: 'vendo', label: 'Vendo', icon: Package, description: 'Algo que ya no necesito' },
-                  { id: 'busco', label: 'Busco', icon: MapPin, description: 'Algo que necesito' },
-                  { id: 'oferta', label: 'Oferta', icon: DollarSign, description: 'Un servicio' }
+                  { id: 'vendo', label: 'Venta', icon: Package, description: 'Vendo algo que ya no necesito' },
+                  { id: 'busco', label: 'Compra', icon: ShoppingCart, description: 'Busco algo específico para comprar' },
+                  { id: 'alquilo', label: 'Alquiler', icon: Calendar, description: 'Ofrezco algo en alquiler' },
+                  { id: 'busco_alquiler', label: 'Busco Alquiler', icon: Search, description: 'Necesito alquilar algo' },
+                  { id: 'oferta', label: 'Ofrezco Servicio', icon: Star, description: 'Ofrezco un servicio profesional' },
+                  { id: 'busco_servicio', label: 'Busco Servicio', icon: Search, description: 'Necesito contratar un servicio' }
                 ].map((option) => (
                   <Card
                     key={option.id}
@@ -448,7 +480,7 @@ export default function AnuncioEdit() {
                         : 'hover:ring-1 hover:ring-gray-300'
                     }`}
                     onClick={() => {
-                      updateFormData('tipo', option.id as 'vendo' | 'busco' | 'oferta');
+                      updateFormData('tipo', option.id as 'vendo' | 'busco' | 'oferta' | 'alquilo' | 'busco_alquiler' | 'busco_servicio');
                       if (currentSection === 1) goToNextSection();
                     }}
                   >
@@ -561,13 +593,378 @@ export default function AnuncioEdit() {
             </Card>
           )}
 
-          {/* Remaining sections placeholder */}
+          {/* Section 3: Detalles del producto */}
           {completedSections.has(2) && (
-            <Card className="border-dashed border-gray-300">
-              <CardContent className="p-6 text-center text-gray-500">
-                <Upload className="h-8 w-8 mx-auto mb-2" />
-                <p>Secciones 3-5 en desarrollo...</p>
-                <p className="text-sm">Detalles • Fotos • Ubicación</p>
+            <Card className={`transition-all ${currentSection >= 3 ? 'ring-2 ring-repsol-orange/20 shadow-lg' : ''}`}>
+              <CardHeader>
+                <div className="flex items-center gap-4">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                    completedSections.has(3) 
+                      ? 'bg-green-100 text-green-700' 
+                      : currentSection === 3 
+                        ? 'bg-repsol-orange text-white' 
+                        : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {completedSections.has(3) ? <Check className="h-4 w-4" /> : "3"}
+                  </div>
+                  <CardTitle className="text-gray-900">Detalles del producto</CardTitle>
+                  {completedSections.has(3) && (
+                    <Badge className="bg-green-100 text-green-700">Completado</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Estado del producto */}
+                <div className="space-y-2">
+                  <Label htmlFor="estado_producto" className="text-sm font-medium text-gray-700">
+                    Estado del producto *
+                  </Label>
+                  <Select value={formData.estado_producto} onValueChange={(value) => updateFormData('estado_producto', value)}>
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Selecciona el estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRODUCT_STATES.map((state) => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Precio de venta/compra */}
+                {(formData.tipo === 'vendo' || formData.tipo === 'busco' || formData.tipo === 'oferta' || formData.tipo === 'busco_servicio') && (
+                  <div className="space-y-2">
+                    <Label htmlFor="precio" className="text-sm font-medium text-gray-700">
+                      {formData.tipo === 'vendo' ? 'Precio de venta *' : 
+                       formData.tipo === 'busco' ? 'Presupuesto máximo *' : 
+                       formData.tipo === 'oferta' ? 'Precio por hora *' :
+                       'Presupuesto *'}
+                    </Label>
+                    <div className="flex gap-3">
+                      <Input
+                        id="precio"
+                        type="number"
+                        value={formData.precio}
+                        onChange={(e) => updateFormData('precio', e.target.value)}
+                        placeholder="0"
+                        className="bg-white flex-1"
+                      />
+                      <Select value={formData.moneda} onValueChange={(value) => updateFormData('moneda', value)}>
+                        <SelectTrigger className="w-24 bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="EUR">€</SelectItem>
+                          <SelectItem value="USD">$</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Precios de alquiler */}
+                {formData.tipo === 'alquilo' && (
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Precios de alquiler *
+                    </Label>
+                    <div className="grid gap-4">
+                      <div>
+                        <Label className="text-xs text-gray-600 mb-1 block">Por día</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            value={formData.precio_alquiler_dia}
+                            onChange={(e) => updateFormData('precio_alquiler_dia', e.target.value)}
+                            placeholder="45"
+                            className="bg-white flex-1"
+                          />
+                          <span className="flex items-center text-sm text-gray-500">€/día</span>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-600 mb-1 block">Por semana</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            value={formData.precio_alquiler_semana}
+                            onChange={(e) => updateFormData('precio_alquiler_semana', e.target.value)}
+                            placeholder="280"
+                            className="bg-white flex-1"
+                          />
+                          <span className="flex items-center text-sm text-gray-500">€/semana</span>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-600 mb-1 block">Por mes</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            value={formData.precio_alquiler_mes}
+                            onChange={(e) => updateFormData('precio_alquiler_mes', e.target.value)}
+                            placeholder="950"
+                            className="bg-white flex-1"
+                          />
+                          <span className="flex items-center text-sm text-gray-500">€/mes</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">Completa al menos uno de los precios</p>
+                  </div>
+                )}
+
+                {/* Presupuesto para busco_alquiler */}
+                {formData.tipo === 'busco_alquiler' && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Presupuesto máximo mensual *
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        value={formData.precio_alquiler_mes}
+                        onChange={(e) => updateFormData('precio_alquiler_mes', e.target.value)}
+                        placeholder="600"
+                        className="bg-white flex-1"
+                      />
+                      <span className="flex items-center text-sm text-gray-500">€/mes</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Indica tu presupuesto mensual máximo</p>
+                  </div>
+                )}
+
+                {/* Dimensiones */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Medidas del producto
+                  </Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Input
+                        value={formData.dimensiones.width}
+                        onChange={(e) => updateNestedFormData('dimensiones', 'width', e.target.value)}
+                        placeholder="Ancho (cm)"
+                        className="bg-white"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        value={formData.dimensiones.height}
+                        onChange={(e) => updateNestedFormData('dimensiones', 'height', e.target.value)}
+                        placeholder="Alto (cm)"
+                        className="bg-white"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        value={formData.dimensiones.depth}
+                        onChange={(e) => updateNestedFormData('dimensiones', 'depth', e.target.value)}
+                        placeholder="Fondo (cm)"
+                        className="bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Envío */}
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="envio"
+                    checked={formData.envio}
+                    onCheckedChange={(checked) => updateFormData('envio', checked)}
+                  />
+                  <Label htmlFor="envio" className="text-sm font-medium text-gray-700">
+                    Ofrezco envío
+                  </Label>
+                </div>
+
+                {completedSections.has(3) && currentSection === 3 && (
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={goToNextSection} className="bg-repsol-orange hover:bg-repsol-orange/90">
+                      Continuar
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Section 4: Fotos */}
+          {completedSections.has(3) && (
+            <Card className={`transition-all ${currentSection >= 4 ? 'ring-2 ring-repsol-orange/20 shadow-lg' : ''}`}>
+              <CardHeader>
+                <div className="flex items-center gap-4">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                    completedSections.has(4) 
+                      ? 'bg-green-100 text-green-700' 
+                      : currentSection === 4 
+                        ? 'bg-repsol-orange text-white' 
+                        : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {completedSections.has(4) ? <Check className="h-4 w-4" /> : "4"}
+                  </div>
+                  <CardTitle className="text-gray-900">Fotos del producto</CardTitle>
+                  {completedSections.has(4) && (
+                    <Badge className="bg-green-100 text-green-700">Completado</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="text-center border-2 border-dashed border-gray-300 rounded-lg p-8">
+                    <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">
+                      {anuncio?.imagenes && anuncio.imagenes.length > 0 
+                        ? `Imágenes actuales: ${anuncio.imagenes.length}`
+                        : 'Sube nuevas fotos (opcional)'
+                      }
+                    </p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Las fotos ayudan a vender más rápido. Máximo 6 imágenes.
+                    </p>
+                    <Button variant="outline" className="gap-2" onClick={() => document.getElementById('image-upload')?.click()}>
+                      <Upload className="h-4 w-4" />
+                      Seleccionar fotos
+                    </Button>
+                    <input
+                      id="image-upload"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                  </div>
+
+                  {/* Preview de imágenes existentes */}
+                  {anuncio?.imagenes && anuncio.imagenes.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-700">
+                        Imágenes actuales
+                      </Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {anuncio.imagenes.map((image, index) => (
+                          <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                            <img 
+                              src={image} 
+                              alt={`Imagen ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preview de nuevas imágenes */}
+                  {formData.imagenes && formData.imagenes.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-700">
+                        Nuevas imágenes
+                      </Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {formData.imagenes.map((file, index) => (
+                          <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                            <img 
+                              src={URL.createObjectURL(file)} 
+                              alt={`Nueva imagen ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2 h-6 w-6 p-0"
+                              onClick={() => removeImage(index)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {completedSections.has(4) && currentSection === 4 && (
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={goToNextSection} className="bg-repsol-orange hover:bg-repsol-orange/90">
+                      Continuar
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Section 5: Ubicación */}
+          {completedSections.has(4) && (
+            <Card className={`transition-all ${currentSection >= 5 ? 'ring-2 ring-repsol-orange/20 shadow-lg' : ''}`}>
+              <CardHeader>
+                <div className="flex items-center gap-4">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                    completedSections.has(5) 
+                      ? 'bg-green-100 text-green-700' 
+                      : currentSection === 5 
+                        ? 'bg-repsol-orange text-white' 
+                        : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {completedSections.has(5) ? <Check className="h-4 w-4" /> : "5"}
+                  </div>
+                  <CardTitle className="text-gray-900">Ubicación</CardTitle>
+                  {completedSections.has(5) && (
+                    <Badge className="bg-green-100 text-green-700">Completado</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Región */}
+                  <div className="space-y-2">
+                    <Label htmlFor="region" className="text-sm font-medium text-gray-700">
+                      Comunidad Autónoma *
+                    </Label>
+                    <Select value={formData.ubicacion.region} onValueChange={(value) => updateNestedFormData('ubicacion', 'region', value)}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Selecciona región" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SPANISH_REGIONS.map((region) => (
+                          <SelectItem key={region} value={region}>{region}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Provincia */}
+                  <div className="space-y-2">
+                    <Label htmlFor="province" className="text-sm font-medium text-gray-700">
+                      Provincia *
+                    </Label>
+                    <Input
+                      id="province"
+                      value={formData.ubicacion.province}
+                      onChange={(e) => updateNestedFormData('ubicacion', 'province', e.target.value)}
+                      placeholder="Ej: Madrid"
+                      className="bg-white"
+                    />
+                  </div>
+
+                  {/* Ciudad */}
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-sm font-medium text-gray-700">
+                      Ciudad *
+                    </Label>
+                    <Input
+                      id="city"
+                      value={formData.ubicacion.city}
+                      onChange={(e) => updateNestedFormData('ubicacion', 'city', e.target.value)}
+                      placeholder="Ej: Madrid"
+                      className="bg-white"
+                    />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}

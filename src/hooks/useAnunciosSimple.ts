@@ -11,11 +11,15 @@ import { useAuth } from '@/hooks/useAuth';
 export interface Anuncio {
   id: string;
   user_id: string;
+  tipo: 'vendo' | 'busco' | 'alquilo' | 'busco_alquiler' | 'oferta' | 'busco_servicio';
   titulo: string;
   descripcion: string;
   categoria: string;
   subcategoria?: string;
-  precio: number;
+  precio?: number;
+  precio_alquiler_dia?: number;
+  precio_alquiler_semana?: number;
+  precio_alquiler_mes?: number;
   moneda: string;
   ubicacion: { region: string; province: string; city: string; };
   estado_producto: string;
@@ -46,11 +50,15 @@ export interface Anuncio {
 }
 
 export interface CreateAnuncioData {
+  tipo: 'vendo' | 'busco' | 'alquilo' | 'busco_alquiler' | 'oferta' | 'busco_servicio';
   titulo: string;
   descripcion: string;
   categoria: string;
   subcategoria?: string;
-  precio: number;
+  precio?: number;
+  precio_alquiler_dia?: number;
+  precio_alquiler_semana?: number;
+  precio_alquiler_mes?: number;
   ubicacion: { region: string; province: string; city: string; };
   estado_producto: string;
   condicion: string;

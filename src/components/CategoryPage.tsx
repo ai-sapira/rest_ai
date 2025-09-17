@@ -7,6 +7,7 @@ import { CategoryFilters } from "./CategoryFilters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Package } from "lucide-react";
+import { getAllowedTypesForCategory, type ContratarCategoryKey } from "@/lib/contratarConfig";
 
 // ✅ FIXED: Interface that matches contratarConfig structure
 interface RawCategoryConfig {
@@ -57,11 +58,7 @@ export function CategoryPage({
       id: condition.toLowerCase().replace(/\s+/g, '_'),
       label: condition
     })),
-    types: [
-      { id: 'venta', label: 'Venta' },
-      { id: 'compra', label: 'Compra' },
-      { id: 'alquiler', label: 'Alquiler' },
-    ],
+    types: getAllowedTypesForCategory(categoryKey as ContratarCategoryKey),
     subcategories: (rawConfig?.subcategories || []).map(sub => ({
       id: sub.toLowerCase().replace(/\s+/g, '_'),
       label: sub
@@ -100,7 +97,7 @@ export function CategoryPage({
       (anuncio.estado_producto && anuncio.estado_producto.toLowerCase().includes(conditionFilter.toLowerCase()));
     
     const matchesType = typeFilter === "todos" || 
-      matchesUnifiedType(typeFilter, anuncio.actor_type === 'provider' ? 'oferta' : 'vendo');
+      matchesUnifiedType(typeFilter as any, anuncio.tipo || (anuncio.actor_type === 'provider' ? 'oferta' : 'vendo'));
 
     const matchesSubcategory = subcategoryFilter === "todos" ||
       (anuncio.subcategoria && anuncio.subcategoria.toLowerCase().includes(subcategoryFilter.toLowerCase()));

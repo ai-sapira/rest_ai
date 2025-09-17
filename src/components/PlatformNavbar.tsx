@@ -110,6 +110,8 @@ export function PlatformNavbar({ onCreatePost, onCreateCommunity, activeTab = "r
            path.includes('/explorar') ||
            path.includes('/mis-comunidades') ||
            path.includes('/comunidades/') ||
+           path.includes('/mi-red') ||
+           path.includes('/user/') ||
            path === '/platform';
   }, [location.pathname]);
 
@@ -201,13 +203,13 @@ export function PlatformNavbar({ onCreatePost, onCreateCommunity, activeTab = "r
       <header className="fixed top-0 z-50 w-full border-b bg-white/95 backdrop-blur-md shadow-sm font-body">
         <div className="flex h-14 items-center">
           {/* Left Section - Logo/Brand */}
-          <div className="flex items-center gap-2 pl-4 w-64 flex-shrink-0">
+          <div className="flex items-center gap-1 pl-4 w-64 flex-shrink-0">
             <img 
               src="/Guia_Repsol.svg" 
               alt="Guía Repsol" 
               className="h-6 w-auto"
             />
-            <span className="font-medium text-lg text-orange-600">hostelería</span>
+            <span className="font-medium text-lg text-orange-600 italic">community</span>
           </div>
 
           {/* Center Section - Search */}
@@ -222,9 +224,9 @@ export function PlatformNavbar({ onCreatePost, onCreateCommunity, activeTab = "r
                     onChange={handleSearchChange}
                     onBlur={handleSearchClose}
                     autoFocus
-                    placeholder="Buscar en hostelería"
+                    placeholder="Buscar en community"
                     className="w-full h-10 pl-10 pr-4 rounded-full border border-orange-500 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all text-sm"
-                    aria-label="Buscar en hostelería"
+                    aria-label="Buscar en community"
                   />
                 ) : (
                   <button 
@@ -232,7 +234,7 @@ export function PlatformNavbar({ onCreatePost, onCreateCommunity, activeTab = "r
                     onClick={handleSearchToggle}
                     aria-label="Abrir búsqueda"
                   >
-                    <span className="text-gray-500">Buscar en hostelería</span>
+                    <span className="text-gray-500">Buscar en community</span>
                   </button>
                 )}
               </div>
@@ -327,11 +329,11 @@ export function PlatformNavbar({ onCreatePost, onCreateCommunity, activeTab = "r
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 p-0">
-                <div className="p-4 border-b bg-gradient-to-r from-repsol-blue to-repsol-blue/95">
-                  <h3 className="font-semibold text-white">Notificaciones</h3>
-                  <p className="text-sm text-white/80 mt-1">
-                    Tienes {mockNotifications.filter(n => n.unread).length} notificaciones sin leer
+              <DropdownMenuContent align="end" className="w-80 p-0 border-repsol-orange/20">
+                <div className="p-4 border-b border-gray-100">
+                  <h3 className="font-semibold text-repsol-blue">Notificaciones</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {mockNotifications.filter(n => n.unread).length} nuevas
                   </p>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
@@ -340,22 +342,20 @@ export function PlatformNavbar({ onCreatePost, onCreateCommunity, activeTab = "r
                     return (
                       <DropdownMenuItem
                         key={notification.id}
-                        className={`flex items-start gap-3 p-4 cursor-pointer hover:bg-repsol-orange/5 ${
-                          notification.unread ? 'bg-repsol-orange/10 border-l-2 border-l-repsol-orange' : ''
+                        className={`flex items-start gap-3 p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                          notification.unread ? 'border-l-2 border-l-repsol-orange' : ''
                         }`}
                       >
-                        <div className={`mt-1 p-2 rounded-full ${
-                          notification.type === 'like' ? 'bg-repsol-orange/20 text-repsol-orange' :
-                          notification.type === 'comment' ? 'bg-repsol-blue/20 text-repsol-blue' :
-                          notification.type === 'follow' ? 'bg-repsol-orange/20 text-repsol-orange' :
-                          notification.type === 'transaction' ? 'bg-repsol-blue/20 text-repsol-blue' :
-                          'bg-repsol-blue/20 text-repsol-blue'
-                        }`}>
-                          <IconComponent className="h-4 w-4" />
+                        <div className="mt-1 p-2 rounded-full bg-gray-100">
+                          <IconComponent className={`h-4 w-4 ${
+                            notification.unread ? 'text-repsol-orange' : 'text-gray-500'
+                          }`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-repsol-blue truncate">
+                            <p className={`text-sm font-medium truncate ${
+                              notification.unread ? 'text-repsol-blue' : 'text-gray-700'
+                            }`}>
                               {notification.title}
                             </p>
                             <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
@@ -366,16 +366,16 @@ export function PlatformNavbar({ onCreatePost, onCreateCommunity, activeTab = "r
                             {notification.message}
                           </p>
                           {notification.unread && (
-                            <div className="w-2 h-2 bg-repsol-orange rounded-full mt-2"></div>
+                            <div className="w-1.5 h-1.5 bg-repsol-orange rounded-full mt-2"></div>
                           )}
                         </div>
                       </DropdownMenuItem>
                     );
                   })}
                 </div>
-                <div className="p-4 border-t bg-repsol-blue/5">
-                  <button className="text-sm text-repsol-blue hover:text-repsol-orange font-medium transition-colors">
-                    Ver todas las notificaciones
+                <div className="p-3 border-t border-gray-100">
+                  <button className="text-sm text-gray-600 hover:text-repsol-orange transition-colors w-full text-center">
+                    Ver todas
                   </button>
                 </div>
               </DropdownMenuContent>

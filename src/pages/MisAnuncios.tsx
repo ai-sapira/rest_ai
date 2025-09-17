@@ -31,7 +31,7 @@ import {
 export default function MisAnuncios() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("activos");
-  const { misAnuncios, loading, error, changeAnuncioStatus, deleteAnuncio } = useMisAnuncios();
+  const { misAnuncios, loading, error, changeAnuncioStatus, deleteAnuncio, refresh } = useMisAnuncios();
 
   // Filter anuncios by status
   const anunciosActivos = misAnuncios.filter(anuncio => 
@@ -42,12 +42,15 @@ export default function MisAnuncios() {
     anuncio.estado === 'expirado' || anuncio.estado === 'finalizado'
   );
 
-  // Helper functions matching contratar section style
+  // Helper functions with Repsol corporate colors
   const getTypeColor = (tipo: string) => {
     switch (tipo) {
-      case 'vendo': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case 'busco': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'oferta': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'vendo': return 'bg-repsol-blue/10 text-repsol-blue border-repsol-blue/20';
+      case 'busco': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'oferta': return 'bg-repsol-orange/10 text-repsol-orange border-repsol-orange/20';
+      case 'alquilo': return 'bg-green-100 text-green-800 border-green-200';
+      case 'busco_alquiler': return 'bg-green-100 text-green-800 border-green-200';
+      case 'busco_servicio': return 'bg-repsol-orange/10 text-repsol-orange border-repsol-orange/20';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
@@ -56,7 +59,10 @@ export default function MisAnuncios() {
     switch (tipo) {
       case 'vendo': return 'Vendo';
       case 'busco': return 'Busco';
-      case 'oferta': return 'Oferto';
+      case 'oferta': return 'Ofrezco';
+      case 'alquilo': return 'Alquilo';
+      case 'busco_alquiler': return 'Busco Alquiler';
+      case 'busco_servicio': return 'Busco Servicio';
       default: return tipo;
     }
   };
@@ -89,6 +95,35 @@ export default function MisAnuncios() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES');
+  };
+
+  // Helper function to get price display for any anuncio type
+  const getPriceDisplay = (anuncio: any) => {
+    if (anuncio.tipo === 'alquilo') {
+      const prices = [];
+      if (anuncio.precio_alquiler_dia) prices.push(`€${anuncio.precio_alquiler_dia}/día`);
+      if (anuncio.precio_alquiler_semana) prices.push(`€${anuncio.precio_alquiler_semana}/sem`);
+      if (anuncio.precio_alquiler_mes) prices.push(`€${anuncio.precio_alquiler_mes}/mes`);
+      
+      if (prices.length > 0) {
+        return { display: prices[0], hasPrice: true };
+      }
+    } else if (anuncio.tipo === 'busco_alquiler') {
+      if (anuncio.precio_alquiler_mes) {
+        return { display: `Hasta €${anuncio.precio_alquiler_mes}/mes`, hasPrice: true };
+      }
+    } else if (anuncio.precio) {
+      return { display: `€${anuncio.precio}`, hasPrice: true };
+    }
+    
+    // Fallback text based on type
+    switch (anuncio.tipo) {
+      case 'busco':
+      case 'busco_servicio':
+        return { display: 'Buscando', hasPrice: false };
+      default:
+        return { display: 'Consultar', hasPrice: false };
+    }
   };
 
   // Custom AnuncioCard for Mis Anuncios with integrated actions
@@ -210,15 +245,9 @@ export default function MisAnuncios() {
           <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-100">
             {/* Price */}
             <div className="flex items-center">
-              {anuncio.precio ? (
-                <span className="text-2xl font-bold text-repsol-blue">
-                  {anuncio.precio}€
-                </span>
-              ) : (
-                <span className="text-lg font-semibold text-gray-600">
-                  {anuncio.tipo === 'busco' ? 'Buscando' : 'Consultar'}
-                </span>
-              )}
+              <span className={`${getPriceDisplay(anuncio).hasPrice ? 'text-2xl font-bold text-repsol-blue' : 'text-lg font-semibold text-gray-600'}`}>
+                {getPriceDisplay(anuncio).display}
+              </span>
             </div>
             
             {/* Action Buttons */}
@@ -310,7 +339,7 @@ export default function MisAnuncios() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <p className="text-red-500 mb-4">Error: {error}</p>
-            <Button onClick={() => window.location.reload()}>
+            <Button onClick={() => refresh()}>
               Intentar de nuevo
             </Button>
           </div>
@@ -355,7 +384,7 @@ export default function MisAnuncios() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => window.location.reload()}
+                onClick={() => refresh()}
                 className="text-red-600 border-red-300 hover:bg-red-100"
               >
                 Reintentar

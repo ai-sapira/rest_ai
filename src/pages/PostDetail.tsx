@@ -188,8 +188,8 @@ export default function PostDetail() {
           });
       }
 
-      // Refresh page to update state
-      window.location.reload();
+      // Use state management instead of page reload
+      console.log('Community join/leave completed - state should be managed by hooks');
     } catch (error) {
       console.error('Error joining/leaving community:', error);
     }

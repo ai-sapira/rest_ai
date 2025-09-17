@@ -110,16 +110,14 @@ export function useCommunities() {
     }
   }, [authLoading, user?.id]);
 
-  // ✅ DEMO MODE: Super aggressive refresh for demo
+  // Initial load when component mounts - single call only
   useEffect(() => {
-    console.log('🔍 useEffect [] MOUNT TRIGGERED - DEMO MODE');
-    console.log('🔄 useCommunities: DEMO MODE - Immediate refresh on mount');
-    // Double refresh for demo reliability
-    refresh();
-    setTimeout(() => {
-      console.log('🔄 useCommunities: DEMO MODE - Secondary refresh (100ms)');
+    console.log('🔍 useCommunities: Component mounted');
+    // Only refresh if auth is already ready to avoid duplicate calls
+    if (!authLoading && user !== undefined) {
+      console.log('🔄 useCommunities: Auth ready on mount, loading data');
       refresh();
-    }, 100); // Secondary refresh after 100ms
+    }
   }, []); // Run once on mount
 
   return {

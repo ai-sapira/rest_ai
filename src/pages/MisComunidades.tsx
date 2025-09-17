@@ -164,10 +164,11 @@ export default function MisComunidades() {
   useEffect(() => {
     if (loading && !hasLoadingTimeout) {
       timeoutRef.current = setTimeout(() => {
-        console.log('🔄 Demo mode: Fast reload triggered (MisComunidades)');
+        console.log('🔄 Loading timeout: Retrying data fetch (MisComunidades)');
         setHasLoadingTimeout(true);
-        window.location.reload();
-      }, 800); // Very fast - 0.8 seconds for demo
+        // Retry data fetch instead of page reload
+        refresh();
+      }, 3000); // 3 seconds timeout
     } else if (!loading && timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       setHasLoadingTimeout(false);

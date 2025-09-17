@@ -37,6 +37,7 @@ import ServicioDetail from "./ServicioDetail";
 import Explorar from "./Explorar";
 import ProviderProfile from "./ProviderProfile";
 import CommunityDetail from "./CommunityDetail";
+import UserDetail from "./UserDetail";
 import { CreateCommunityForm } from "@/components/CreateCommunityForm";
 import { useCommunities } from "@/hooks/useCommunities";
 
@@ -376,6 +377,7 @@ export default function Platform() {
             <Route path="/comunidades/:slug" element={<CommunityDetail />} />
             <Route path="/mis-threads" element={<MisThreads />} />
             <Route path="/mi-red" element={<MiRed />} />
+            <Route path="/user/:userId" element={<UserDetail />} />
             <Route path="/buscar" element={<Categorias />} />
             <Route path="/categorias" element={<Categorias />} />
             <Route path="/contratar/maquinaria" element={<Maquinaria />} />

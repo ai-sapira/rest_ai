@@ -120,13 +120,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Safety timeout to prevent infinite loading
+  // Safety timeout to prevent infinite loading - only if truly stuck
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (loading) {
+        console.warn('Auth loading timeout reached, forcing loading to false');
         setLoading(false);
       }
-    }, 4000);
+    }, 8000); // Increased timeout and only if really stuck
     return () => clearTimeout(timeoutId);
   }, [loading]);
 

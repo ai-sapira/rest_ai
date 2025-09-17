@@ -12,6 +12,7 @@ import { useTransactionsSimple } from "@/hooks/useTransactionsSimple";
 import { useMessages } from "@/hooks/useMessages";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
+import { useAnunciosSimple } from "@/hooks/useAnunciosSimple";
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
@@ -203,26 +204,35 @@ export default function Mensajes() {
   const location = useLocation();
   const { user } = useAuth();
   const { transactions, offers } = useTransactionsSimple();
+  const { anuncios } = useAnunciosSimple();
   
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
-  const [selectedChatType, setSelectedChatType] = useState<'transaction' | 'offer' | null>(null);
+  const [selectedChatType, setSelectedChatType] = useState<'transaction' | 'offer' | 'contact' | null>(null);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
 
   // Check if we came from a specific chat link
   useEffect(() => {
-    if (location.state?.chatType && location.state?.chatId && location.state?.otherUserId) {
+    if (location.state?.chatType && location.state?.ownerId) {
       setSelectedChatType(location.state.chatType);
-      setSelectedChatId(location.state.chatId);
-      setOtherUserId(location.state.otherUserId);
-      setSelectedConversation(`${location.state.chatType}-${location.state.chatId}`);
+      setOtherUserId(location.state.ownerId);
+      
+      if (location.state.chatType === 'contact') {
+        setSelectedChatId(location.state.anuncioId);
+        // Create the conversation ID that matches our new conversation format
+        const conversationId = `contact-${location.state.anuncioId}-${location.state.ownerId}`;
+        setSelectedConversation(conversationId);
+      } else {
+        setSelectedChatId(location.state.chatId);
+        setSelectedConversation(`${location.state.chatType}-${location.state.chatId}`);
+      }
     }
   }, [location.state]);
 
-  // Get real conversations from transactions and offers
+  // Get real conversations from transactions, offers, and contact messages
   const getRealConversations = () => {
     const conversations: any[] = [];
 
@@ -294,9 +304,63 @@ export default function Mensajes() {
       });
     });
 
-    return conversations.sort((a, b) => 
-      new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()
-    );
+    // Add conversations from anuncios contact (where user is owner)
+    anuncios.filter(a => a.user_id === user?.id).forEach(anuncio => {
+      conversations.push({
+        id: `contact-${anuncio.id}-placeholder`,
+        name: `Contacto sobre: ${anuncio.titulo}`,
+        lastMessage: "Conversación sobre tu anuncio",
+        timestamp: formatDistanceToNow(new Date(anuncio.created_at), { locale: es }),
+        unread: 0,
+        avatar: null,
+        status: "offline",
+        type: "contact",
+        isRequest: false,
+        data: { 
+          id: anuncio.id, 
+          created_at: anuncio.created_at,
+          anuncio_title: anuncio.titulo,
+          anuncio_id: anuncio.id
+        },
+        otherUserId: null
+      });
+    });
+
+    // Add specific contact conversation if we came from an anuncio
+    if (location.state?.chatType === 'contact' && location.state?.anuncioId && location.state?.anuncioTitle) {
+      const conversationId = `contact-${location.state.anuncioId}-${location.state.ownerId}`;
+      
+      // Check if this conversation already exists
+      const existingConv = conversations.find(c => c.id === conversationId);
+      
+      if (!existingConv) {
+        conversations.unshift({
+          id: conversationId,
+          name: `Contacto sobre: ${location.state.anuncioTitle}`,
+          lastMessage: "Inicia la conversación...",
+          timestamp: "ahora",
+          unread: 0,
+          avatar: null,
+          status: "offline",
+          type: "contact",
+          isRequest: false,
+          data: {
+            id: location.state.anuncioId,
+            created_at: new Date().toISOString(),
+            anuncio_title: location.state.anuncioTitle,
+            anuncio_id: location.state.anuncioId
+          },
+          otherUserId: location.state.ownerId
+        });
+      }
+    }
+
+    return conversations.sort((a, b) => {
+      // Put the selected conversation first if it exists
+      if (selectedConversation && a.id === selectedConversation) return -1;
+      if (selectedConversation && b.id === selectedConversation) return 1;
+      return new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime();
+    });
   };
 
   const realConversations = getRealConversations();
@@ -306,7 +370,26 @@ export default function Mensajes() {
     conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const currentConversation = realConversations.find(conv => conv.id === selectedConversation);
+  const currentConversation = realConversations.find(conv => conv.id === selectedConversation) || 
+    // If no conversation found but we have contact details, create one dynamically
+    (selectedChatType === 'contact' && selectedChatId && otherUserId && location.state?.anuncioTitle ? {
+      id: selectedConversation,
+      name: `Contacto sobre: ${location.state.anuncioTitle}`,
+      lastMessage: "Inicia la conversación...",
+      timestamp: "ahora",
+      unread: 0,
+      avatar: null,
+      status: "offline",
+      type: "contact",
+      isRequest: false,
+      data: {
+        id: selectedChatId,
+        created_at: new Date().toISOString(),
+        anuncio_title: location.state.anuncioTitle,
+        anuncio_id: selectedChatId
+      },
+      otherUserId: otherUserId
+    } : null);
   
   // Get current chat messages
   const { 
@@ -315,7 +398,8 @@ export default function Mensajes() {
     loading: messagesLoading 
   } = useMessages(
     selectedChatType === 'transaction' ? selectedChatId : undefined,
-    selectedChatType === 'offer' ? selectedChatId : undefined
+    selectedChatType === 'offer' ? selectedChatId : undefined,
+    selectedChatType === 'contact' ? selectedChatId : undefined
   );
 
   const handleSendMessage = async () => {
@@ -325,13 +409,15 @@ export default function Mensajes() {
         message_type: 'text' as const,
         ...(selectedChatType === 'transaction' 
           ? { transaction_id: selectedChatId } 
-          : { offer_id: selectedChatId }
+          : selectedChatType === 'offer'
+          ? { offer_id: selectedChatId }
+          : { anuncio_id: selectedChatId, receiver_id: otherUserId }
         )
       };
 
       const success = await sendMessage(messageData);
       if (success) {
-      setNewMessage("");
+        setNewMessage("");
       }
     }
   };
@@ -339,8 +425,14 @@ export default function Mensajes() {
   const handleSelectConversation = (conv: any) => {
     setSelectedConversation(conv.id);
     setSelectedChatType(conv.type);
-    setSelectedChatId(conv.data.id);
-    setOtherUserId(conv.otherUserId);
+    
+    if (conv.type === 'contact') {
+      setSelectedChatId(conv.data.anuncio_id);
+      setOtherUserId(conv.otherUserId);
+    } else {
+      setSelectedChatId(conv.data.id);
+      setOtherUserId(conv.otherUserId);
+    }
   };
 
   const getFilteredConversations = (filter: string) => {

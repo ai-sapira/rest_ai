@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { X, ChevronRight, Upload, MapPin, Euro, Package, ShoppingCart, Calendar, Search, Star } from "lucide-react";
+import { contratarConfig, type ContratarCategoryKey } from "@/lib/contratarConfig";
 
 interface CreateAnuncioFormProps {
   isOpen: boolean;
@@ -15,7 +16,9 @@ interface CreateAnuncioFormProps {
 }
 
 interface FormData {
-  type: 'vendo' | 'compro' | 'alquilo' | 'busco_alquiler' | 'oferta' | null;
+  type: 'vendo' | 'compro' | 'alquilo' | 'busco_alquiler' | 'servicio' | null;
+  // Subtipo de servicio
+  serviceType: 'ofrezco' | 'busco' | null;
   category: string;
   subcategory: string;
   title: string;
@@ -43,6 +46,7 @@ interface FormData {
 
 const INITIAL_FORM_DATA: FormData = {
   type: null,
+  serviceType: null,
   category: '',
   subcategory: '',
   title: '',
@@ -85,6 +89,28 @@ export function CreateAnuncioForm({ isOpen, onClose, category = 'maquinaria' }: 
   const [currentSection, setCurrentSection] = useState(1);
   const [completedSections, setCompletedSections] = useState<Set<number>>(new Set());
 
+  // Get allowed types for current category
+  const categoryConfig = contratarConfig[category as ContratarCategoryKey];
+  const allowsRental = categoryConfig?.allowRental !== false;
+
+  // Dynamic type options based on category
+  const getTypeOptions = () => {
+    const baseOptions = [
+      { id: 'vendo', label: 'Venta', icon: Package, description: 'Vendo algo que ya no necesito' },
+      { id: 'compro', label: 'Compra', icon: ShoppingCart, description: 'Busco algo específico para comprar' }
+    ];
+
+    if (allowsRental && category !== 'servicios') {
+      baseOptions.push({ id: 'alquilo', label: 'Alquiler', icon: Calendar, description: 'Alquiler de equipamiento' });
+    }
+
+    if (category === 'servicios') {
+      baseOptions.push({ id: 'servicio', label: 'Servicios', icon: Star, description: 'Servicios profesionales' });
+    }
+
+    return baseOptions;
+  };
+
   // Progress calculation
   const totalSections = 5;
   const progress = (completedSections.size / totalSections) * 100;
@@ -93,6 +119,9 @@ export function CreateAnuncioForm({ isOpen, onClose, category = 'maquinaria' }: 
   const isSectionComplete = (section: number): boolean => {
     switch (section) {
       case 1: // Tipo de anuncio
+        if (formData.type === 'servicio') {
+          return !!(formData.type && formData.serviceType);
+        }
         return !!formData.type;
       case 2: // Información básica
         return !!(formData.title && formData.description && formData.subcategory);
@@ -191,7 +220,7 @@ export function CreateAnuncioForm({ isOpen, onClose, category = 'maquinaria' }: 
                 <div className="flex items-center gap-3 mb-4">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     completedSections.has(1) ? 'bg-green-100 text-green-700' : 
-                    currentSection === 1 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                    currentSection === 1 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'
                   }`}>
                     1
                   </div>
@@ -203,30 +232,33 @@ export function CreateAnuncioForm({ isOpen, onClose, category = 'maquinaria' }: 
                   )}
                 </div>
 
+                {!allowsRental && (
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800">
+                      <strong>Nota:</strong> Los productos de {category} no están disponibles para alquiler. 
+                      Solo puedes vender o buscar productos de esta categoría.
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    { id: 'vendo', label: 'Venta', icon: Package, description: 'Vendo algo que ya no necesito', color: 'blue' },
-                    { id: 'compro', label: 'Compra', icon: ShoppingCart, description: 'Busco algo específico para comprar', color: 'purple' },
-                    { id: 'alquilo', label: 'Alquiler', icon: Calendar, description: 'Ofrezco algo en alquiler', color: 'green' },
-                    { id: 'busco_alquiler', label: 'Busco Alquiler', icon: Search, description: 'Necesito alquilar algo', color: 'orange' },
-                    { id: 'oferta', label: 'Servicio', icon: Star, description: 'Ofrezco un servicio profesional', color: 'red' }
-                  ].map((option) => {
+                  {getTypeOptions().map((option) => {
                     const Icon = option.icon;
                     return (
                       <button
                         key={option.id}
                         onClick={() => {
-                          updateFormData('type', option.id as 'vendo' | 'compro' | 'alquilo' | 'busco_alquiler' | 'oferta');
-                          if (currentSection === 1) goToNextSection();
+                          updateFormData('type', option.id as 'vendo' | 'compro' | 'alquilo' | 'servicio');
+                          if (option.id !== 'alquilo' && option.id !== 'servicio' && currentSection === 1) goToNextSection();
                         }}
-                        className={`p-4 rounded-lg border-2 transition-all hover:border-blue-300 ${
+                        className={`p-4 rounded-lg border-2 transition-all hover:border-repsol-orange/50 ${
                           formData.type === option.id 
-                            ? 'border-blue-500 bg-blue-50' 
+                            ? 'border-repsol-orange bg-orange-50' 
                             : 'border-gray-200 hover:bg-gray-50'
                         }`}
                       >
                         <Icon className={`h-8 w-8 mx-auto mb-2 ${
-                          formData.type === option.id ? 'text-blue-600' : 'text-gray-400'
+                          formData.type === option.id ? 'text-repsol-orange' : 'text-gray-400'
                         }`} />
                         <div className="text-sm font-medium">{option.label}</div>
                         <div className="text-xs text-gray-500 mt-1">{option.description}</div>
@@ -234,6 +266,52 @@ export function CreateAnuncioForm({ isOpen, onClose, category = 'maquinaria' }: 
                     );
                   })}
                 </div>
+
+                {/* Subtipo de servicio */}
+                {formData.type === 'servicio' && (
+                  <div className="space-y-4 mt-6">
+                    <p className="text-sm font-medium text-gray-700">
+                      ¿Qué tipo de servicio?
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <button
+                        onClick={() => {
+                          updateFormData('serviceType', 'ofrezco');
+                          if (currentSection === 1) goToNextSection();
+                        }}
+                        className={`p-4 rounded-lg border-2 transition-all hover:border-repsol-orange/50 ${
+                          formData.serviceType === 'ofrezco'
+                            ? 'border-repsol-orange bg-orange-50' 
+                            : 'border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Star className={`h-6 w-6 mx-auto mb-2 ${
+                          formData.serviceType === 'ofrezco' ? 'text-repsol-orange' : 'text-gray-400'
+                        }`} />
+                        <div className="text-sm font-medium">Ofrezco servicio</div>
+                        <div className="text-xs text-gray-500 mt-1">Tengo un servicio profesional para ofrecer</div>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          updateFormData('serviceType', 'busco');
+                          if (currentSection === 1) goToNextSection();
+                        }}
+                        className={`p-4 rounded-lg border-2 transition-all hover:border-repsol-orange/50 ${
+                          formData.serviceType === 'busco'
+                            ? 'border-repsol-orange bg-orange-50' 
+                            : 'border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Search className={`h-6 w-6 mx-auto mb-2 ${
+                          formData.serviceType === 'busco' ? 'text-repsol-orange' : 'text-gray-400'
+                        }`} />
+                        <div className="text-sm font-medium">Busco servicio</div>
+                        <div className="text-xs text-gray-500 mt-1">Necesito contratar un servicio profesional</div>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {completedSections.has(1) && currentSection === 1 && (
                   <div className="mt-4 flex justify-end">
@@ -252,7 +330,7 @@ export function CreateAnuncioForm({ isOpen, onClose, category = 'maquinaria' }: 
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                       completedSections.has(2) ? 'bg-green-100 text-green-700' : 
-                      currentSection === 2 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                      currentSection === 2 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'
                     }`}>
                       2
                     </div>
@@ -336,7 +414,7 @@ export function CreateAnuncioForm({ isOpen, onClose, category = 'maquinaria' }: 
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                       completedSections.has(3) ? 'bg-green-100 text-green-700' : 
-                      currentSection === 3 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                      currentSection === 3 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'
                     }`}>
                       3
                     </div>

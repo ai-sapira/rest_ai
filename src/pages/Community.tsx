@@ -21,6 +21,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogPortal,
+  DialogOverlay,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -143,14 +145,15 @@ export default function Community({
   const [hasLoadingTimeout, setHasLoadingTimeout] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout>();
 
-  // ✅ DEMO TIMEOUT: Very fast reload for demo presentation
+  // Loading timeout - retry data fetch instead of page reload
   useEffect(() => {
     if (communitiesLoading && !hasLoadingTimeout) {
       timeoutRef.current = setTimeout(() => {
-        console.log('🔄 Demo mode: Fast reload triggered');
+        console.log('🔄 Loading timeout: Retrying data fetch');
         setHasLoadingTimeout(true);
-        window.location.reload();
-      }, 800); // Very fast - 0.8 seconds for demo
+        // Retry data fetch instead of page reload
+        refreshCommunities();
+      }, 3000); // 3 seconds timeout
     } else if (!communitiesLoading && timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       setHasLoadingTimeout(false);
@@ -558,173 +561,167 @@ export default function Community({
           </div>
         </div>
       </div>
-      {/* Create Post Modal - Modern Design */}
+      {/* Create Post Modal - Minimal Design */}
       <Dialog open={isCreatePostModalOpen} onOpenChange={setIsCreatePostModalOpen}>
-        <DialogContent className="sm:max-w-[600px] p-0 border border-gray-200 shadow-xl rounded-xl bg-white">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Crear publicación</DialogTitle>
-            <DialogDescription>
-              Crea una nueva publicación para compartir con tu comunidad
-            </DialogDescription>
-          </DialogHeader>
+        <DialogPortal>
+          <DialogOverlay />
+          <div className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] w-full max-w-3xl max-h-[85vh] bg-white border border-orange-200/50 shadow-2xl rounded-3xl overflow-hidden flex flex-col duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          >
           
-          {/* Header */}
-          <div className="flex items-center gap-3 p-6 border-b border-gray-100">
-            <div className="p-2 bg-repsol-blue rounded-lg">
-              <MessageSquare className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900">Crear publicación</h2>
-              <p className="text-sm text-gray-600">Comparte algo con tu comunidad</p>
+          {/* Minimal Header */}
+          <div className="flex items-center justify-between px-10 py-8 border-b border-orange-100/80">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full border-2 border-orange-200 bg-white flex items-center justify-center overflow-hidden">
+                <Avatar className="h-full w-full">
+                  <AvatarImage src={user?.user_metadata?.avatar_url} />
+                  <AvatarFallback className="bg-orange-50 text-orange-600 text-base font-medium">
+                    {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Nueva publicación</h2>
+                <p className="text-sm text-gray-500">{user?.user_metadata?.full_name || user?.email || 'Usuario'}</p>
+              </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsCreatePostModalOpen(false)}
-              className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
+              className="h-10 w-10 p-0 hover:bg-orange-50 rounded-full text-gray-400 hover:text-orange-500 transition-colors"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
 
-          <div className="p-6 space-y-6">
-            {/* User Info */}
-            <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12 flex-shrink-0">
-                <AvatarImage src={user?.user_metadata?.avatar_url} />
-                <AvatarFallback className="bg-gradient-to-br from-repsol-blue to-repsol-orange text-white font-medium">
-                  {user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium text-gray-900">
-                  {user?.user_metadata?.full_name || user?.email || "Usuario"}
-                </p>
-                <p className="text-sm text-gray-500">Compartir en tu comunidad</p>
-              </div>
-            </div>
-
-            {/* Community Selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Publicar en:</label>
+          {/* Main Content Area - Maximized */}
+          <div className="flex-1 px-10 py-8 flex flex-col overflow-y-auto">
+            
+            {/* Community Selector - Improved */}
+            <div className="mb-8">
               <Select value={selectedCommunityId} onValueChange={setSelectedCommunityId}>
-                <SelectTrigger className="w-full bg-gray-50 border-gray-200 hover:bg-gray-100 transition-colors">
-                  <SelectValue placeholder="🌐 General" />
+                <SelectTrigger className="w-fit min-w-[200px] border border-orange-200 bg-orange-50/50 hover:bg-orange-50 rounded-full px-6 py-3 text-sm text-gray-700 shadow-none focus:ring-2 focus:ring-orange-200 focus:border-orange-300 transition-all">
+                  <div className="flex items-center gap-2">
+                    {selectedCommunityId === 'general' ? (
+                      <>
+                        <Globe className="h-4 w-4 text-orange-500" />
+                        <span>Público - General</span>
+                      </>
+                    ) : (
+                      <>
+                        <Hash className="h-4 w-4 text-orange-500" />
+                        <span>{userCommunities.find(c => c.id === selectedCommunityId)?.name || 'Comunidad'}</span>
+                      </>
+                    )}
+                  </div>
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="general">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1 bg-repsol-blue/10 rounded-full">
-                        <Globe className="h-3 w-3 text-repsol-blue" />
+                <SelectContent className="min-w-[300px] border-orange-100 rounded-xl shadow-lg">
+                  <SelectItem value="general" className="focus:bg-orange-50 cursor-pointer">
+                    <div className="flex items-center gap-3 py-2">
+                      <Globe className="h-4 w-4 text-orange-500" />
+                      <div>
+                        <div className="font-medium text-gray-800">General</div>
+                        <div className="text-xs text-gray-500">Visible para todos los usuarios</div>
                       </div>
-                      General
                     </div>
                   </SelectItem>
                   {userCommunities.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 bg-orange-50 rounded-full">
-                          <Hash className="h-3 w-3 text-repsol-orange" />
+                    <SelectItem key={c.id} value={c.id} className="focus:bg-orange-50 cursor-pointer">
+                      <div className="flex items-center gap-3 py-2">
+                        <Hash className="h-4 w-4 text-orange-500" />
+                        <div>
+                          <div className="font-medium text-gray-800">{c.name}</div>
+                          <div className="text-xs text-gray-500">Solo miembros de esta comunidad</div>
                         </div>
-                        {c.name}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Post Content */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Contenido:</label>
+            
+            {/* Text Input - Maximized */}
+            <div className="flex-1 flex flex-col">
               <Textarea
-                placeholder="¿Qué quieres compartir con tu comunidad?"
                 value={newPostContent}
                 onChange={(e) => setNewPostContent(e.target.value)}
-                className="min-h-[120px] border-gray-200 bg-gray-50 focus:bg-white focus:border-repsol-blue resize-none text-base placeholder:text-gray-400 transition-all duration-200"
+                placeholder="Comparte algo interesante con la comunidad..."
+                className="flex-1 w-full resize-none border-0 border-l-4 border-orange-200 focus:border-orange-400 focus:ring-0 p-8 text-xl leading-relaxed placeholder:text-gray-400 bg-orange-50/30 rounded-r-2xl transition-all duration-300 focus:bg-orange-50/50"
+                style={{ minHeight: '200px', maxHeight: '400px' }}
                 maxLength={500}
                 autoFocus
               />
-              <div className="flex justify-between items-center">
-                <p className="text-xs text-gray-500">
-                  Máximo 500 caracteres
-                </p>
-                <p className={`text-xs tabular-nums ${
-                  newPostContent.length > 450 
-                    ? "text-red-500" 
-                    : newPostContent.length > 400 
-                    ? "text-orange-500" 
-                    : "text-gray-500"
+              
+              {/* Character Counter - Minimal */}
+              <div className="flex justify-between items-center mt-6 px-2">
+                <div className="flex items-center gap-4">
+                  {/* Image Upload */}
+                  <div className="relative">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-10 w-10 p-0 hover:bg-orange-100 rounded-full text-orange-400 hover:text-orange-600 transition-colors"
+                    >
+                      <ImageIcon className="h-5 w-5" />
+                    </Button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Link with announcement button */}
+                  <Button 
+                    variant="ghost"
+                    size="sm" 
+                    className={`h-10 w-10 p-0 rounded-full transition-colors ${
+                      isLinkedToAnnouncement 
+                        ? "bg-orange-100 text-orange-600 hover:bg-orange-200" 
+                        : "text-orange-400 hover:bg-orange-100 hover:text-orange-600"
+                    }`}
+                    onClick={handleLinkToAnnouncement}
+                  >
+                    <Package className="h-5 w-5" />
+                  </Button>
+                </div>
+                
+                <div className={`text-sm transition-colors ${
+                  newPostContent.length > 500 ? 'text-red-500 font-medium' : 
+                  newPostContent.length > 450 ? 'text-orange-500' : 'text-gray-400'
                 }`}>
                   {newPostContent.length}/500
-                </p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Actions Footer */}
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {/* Image Upload */}
-                <div className="relative">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors"
-                  >
-                    <ImageIcon className="h-4 w-4 mr-2" />
-                    Imagen
-                  </Button>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                </div>
-
-                {/* Link with announcement button */}
-                <Button 
-                  variant={isLinkedToAnnouncement ? "default" : "outline"}
-                  size="sm" 
-                  className={`transition-colors ${
-                    isLinkedToAnnouncement 
-                      ? "bg-repsol-orange text-white hover:bg-repsol-orange/90" 
-                      : "border-repsol-orange/30 text-repsol-orange hover:bg-orange-50"
-                  }`}
-                  onClick={handleLinkToAnnouncement}
-                >
-                  <Package className="h-4 w-4 mr-2" />
-                  Vincular anuncio
-                </Button>
-              </div>
-
-              {/* Post Button */}
+          {/* Bottom Action Bar - Enhanced */}
+          <div className="flex-shrink-0 px-10 py-8 border-t border-orange-100/80 bg-gradient-to-r from-orange-50/20 to-white">
+            <div className="flex justify-end">
               <Button
                 onClick={handleCreatePost}
                 disabled={!newPostContent.trim() || !user || isCreatingPost || newPostContent.length > 500}
-                className={`px-6 py-2 font-medium transition-all duration-200 ${
+                className={`px-12 py-4 text-lg font-semibold rounded-2xl transition-all duration-300 min-w-[140px] ${
                   !newPostContent.trim() || !user || isCreatingPost || newPostContent.length > 500
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300"
-                    : "bg-repsol-blue hover:bg-repsol-blue/90 text-white shadow-md hover:shadow-lg"
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none border border-gray-200"
+                    : "bg-orange-500 hover:bg-orange-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
                 }`}
               >
                 {isCreatingPost ? (
-                  <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Publicando...
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Publicando...</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Publicar
-                  </div>
+                  <span>Publicar</span>
                 )}
               </Button>
             </div>
           </div>
-        </DialogContent>
+        </div>
+        </DialogPortal>
       </Dialog>
 
     </motion.div>

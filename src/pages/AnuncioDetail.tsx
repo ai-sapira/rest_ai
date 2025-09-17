@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAnuncio, useAnunciosSimple, type Anuncio } from "@/hooks/useAnunciosSimple";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransactionsSimple } from "@/hooks/useTransactionsSimple";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   MapPin,
@@ -39,8 +40,9 @@ export default function AnuncioDetail() {
   
   // ✅ SINGLE SOURCE OF TRUTH - Use only hook loading state
   const { anuncio, loading, error } = useAnuncio(id!);
-  const { incrementViews } = useAnunciosSimple();
+  const { incrementViews, deleteAnuncio, isDeletingAnuncio } = useAnunciosSimple();
   const { user } = useAuth();
+  const { toast } = useToast();
   
   // ✅ SEPARATE CONCERNS - Only UI-specific states
   const [isFavorite, setIsFavorite] = useState(false);
@@ -62,6 +64,8 @@ export default function AnuncioDetail() {
         return "bg-purple-100 text-purple-800 border-purple-200";
       case "oferta":
         return "bg-green-100 text-green-800 border-green-200";
+      case "busco_servicio":
+        return "bg-amber-100 text-amber-800 border-amber-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -88,6 +92,28 @@ export default function AnuncioDetail() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const handleDeleteAnuncio = async () => {
+    if (!anuncio?.id) return;
+    
+    if (window.confirm('¿Estás seguro de que quieres eliminar este anuncio? Esta acción no se puede deshacer.')) {
+      const success = await deleteAnuncio(anuncio.id);
+      
+      if (success) {
+        toast({
+          title: "Anuncio eliminado",
+          description: "Tu anuncio ha sido eliminado exitosamente.",
+        });
+        navigate('/platform/mis-anuncios');
+      } else {
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar el anuncio. Inténtalo de nuevo.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   // ✅ PROPER LOADING STATE - Use hook loading
@@ -377,11 +403,41 @@ export default function AnuncioDetail() {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>Precio</span>
-                  {anuncio.precio && (
-                    <span className="text-2xl font-bold text-primary">
-                      €{parseInt(anuncio.precio).toLocaleString()}
-                    </span>
-                  )}
+                  <div className="text-right">
+                    {anuncio.tipo === 'alquilo' ? (
+                      <div>
+                        {anuncio.precio_alquiler_dia && (
+                          <div className="text-2xl font-bold text-primary">
+                            €{parseInt(anuncio.precio_alquiler_dia).toLocaleString()}/día
+                          </div>
+                        )}
+                        {anuncio.precio_alquiler_semana && (
+                          <div className="text-lg font-semibold text-muted-foreground">
+                            €{parseInt(anuncio.precio_alquiler_semana).toLocaleString()}/semana
+                          </div>
+                        )}
+                        {anuncio.precio_alquiler_mes && (
+                          <div className="text-lg font-semibold text-muted-foreground">
+                            €{parseInt(anuncio.precio_alquiler_mes).toLocaleString()}/mes
+                          </div>
+                        )}
+                      </div>
+                    ) : anuncio.tipo === 'busco_alquiler' ? (
+                      anuncio.precio_alquiler_mes && (
+                        <div className="text-2xl font-bold text-primary">
+                          Hasta €{parseInt(anuncio.precio_alquiler_mes).toLocaleString()}/mes
+                        </div>
+                      )
+                    ) : anuncio.precio ? (
+                      <span className="text-2xl font-bold text-primary">
+                        €{parseInt(anuncio.precio).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-lg font-semibold text-muted-foreground">
+                        Consultar precio
+                      </span>
+                    )}
+                  </div>
                 </CardTitle>
                 {anuncio.categoria === 'servicios' && anuncio.salario_min && anuncio.salario_max && (
                   <p className="text-sm text-muted-foreground">
@@ -411,9 +467,14 @@ export default function AnuncioDetail() {
                     
                     <Separator />
                     
-                    <Button variant="outline" className="w-full gap-2 text-red-600 hover:text-red-700 hover:bg-red-50">
+                    <Button 
+                      variant="outline" 
+                      className="w-full gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={handleDeleteAnuncio}
+                      disabled={isDeletingAnuncio}
+                    >
                       <Trash2 className="h-4 w-4" />
-                      Eliminar anuncio
+                      {isDeletingAnuncio ? 'Eliminando...' : 'Eliminar anuncio'}
                     </Button>
                   </>
                 ) : user ? (
@@ -440,6 +501,22 @@ export default function AnuncioDetail() {
                         <Separator />
                       </>
                     )}
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full gap-2"
+                      onClick={() => navigate('/platform/mensajes', {
+                        state: {
+                          chatType: 'contact',
+                          anuncioId: anuncio.id,
+                          ownerId: anuncio.user_id,
+                          anuncioTitle: anuncio.titulo
+                        }
+                      })}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Contactar vendedor
+                    </Button>
                     
                   </>
                 ) : (

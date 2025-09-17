@@ -6,9 +6,10 @@ export type ContratarCategoryKey =
   | 'utensilios'
   | 'menaje'
   | 'bodega'
-  | 'aprovisionamientos';
+  | 'aprovisionamientos'
+  | 'servicios';
 
-export type UnifiedTypeFilter = 'todos' | 'venta' | 'compra' | 'alquiler';
+export type UnifiedTypeFilter = 'todos' | 'venta' | 'compra' | 'alquiler' | 'servicio';
 
 export interface PriceRange {
   id: 'bajo' | 'medio' | 'alto';
@@ -20,6 +21,7 @@ export interface CategoryConfig {
   priceRanges: PriceRange[];
   conditionOptions: string[];
   subcategories: string[];
+  allowRental?: boolean; // Permite alquiler en esta categoría
 }
 
 export const contratarConfig: Record<ContratarCategoryKey, CategoryConfig> = {
@@ -30,6 +32,7 @@ export const contratarConfig: Record<ContratarCategoryKey, CategoryConfig> = {
       { id: 'alto', label: 'Más de €5,000', test: (p) => p > 5000 },
     ],
     conditionOptions: ['nuevo', 'como nuevo', 'usado'],
+    allowRental: true,
     subcategories: [
       'Hornos', 'Horno de pizza', 'Horno de convección', 'Horno mixto', 'Salamandras',
       'Cocinas industriales', 'Planchas', 'Parrillas', 'Freidoras',
@@ -48,6 +51,7 @@ export const contratarConfig: Record<ContratarCategoryKey, CategoryConfig> = {
       { id: 'alto', label: 'Más de €3,000', test: (p) => p > 3000 },
     ],
     conditionOptions: ['nuevo', 'como nuevo', 'usado'],
+    allowRental: true,
     subcategories: [
       'Mesas', 'Sillas', 'Taburetes', 'Bancos',
       'Barras', 'Backbar',
@@ -64,6 +68,7 @@ export const contratarConfig: Record<ContratarCategoryKey, CategoryConfig> = {
       { id: 'alto', label: 'Más de €800', test: (p) => p > 800 },
     ],
     conditionOptions: ['nuevo', 'como nuevo', 'usado'],
+    allowRental: true,
     subcategories: [
       'Cuchillos', 'Chairs', 'Tablas de corte',
       'Sartenes', 'Ollas', 'Cazos', 'Cacerolas',
@@ -83,6 +88,7 @@ export const contratarConfig: Record<ContratarCategoryKey, CategoryConfig> = {
       { id: 'alto', label: 'Más de €600', test: (p) => p > 600 },
     ],
     conditionOptions: ['nuevo', 'como nuevo', 'usado'],
+    allowRental: true,
     subcategories: [
       'Vajilla', 'Platos llanos', 'Platos hondos', 'Fuentes', 'Bols',
       'Tazas', 'Platillos', 'Jarras', 'Jarras de cerveza',
@@ -100,6 +106,7 @@ export const contratarConfig: Record<ContratarCategoryKey, CategoryConfig> = {
       { id: 'alto', label: 'Más de €500', test: (p) => p > 500 },
     ],
     conditionOptions: ['nuevo', 'como nuevo', 'usado'],
+    allowRental: false, // ❌ NO permite alquiler
     subcategories: [
       'Vinos tintos', 'Vinos blancos', 'Rosados', 'Espumosos', 'Vermut',
       'Destilados', 'Licores',
@@ -115,6 +122,7 @@ export const contratarConfig: Record<ContratarCategoryKey, CategoryConfig> = {
       { id: 'alto', label: 'Más de €300', test: (p) => p > 300 },
     ],
     conditionOptions: ['nuevo', 'como nuevo', 'usado'],
+    allowRental: false, // ❌ NO permite alquiler
     subcategories: [
       'Carnes vacuno', 'Carnes porcino', 'Aves', 'Caza',
       'Pescados blancos', 'Pescados azules', 'Mariscos',
@@ -128,29 +136,96 @@ export const contratarConfig: Record<ContratarCategoryKey, CategoryConfig> = {
       'Productos veganos', 'Sin gluten'
     ],
   },
+  servicios: {
+    priceRanges: [
+      { id: 'bajo', label: 'Menos de €20/hora', test: (p) => p < 20 },
+      { id: 'medio', label: '€20 - €50/hora', test: (p) => p >= 20 && p <= 50 },
+      { id: 'alto', label: 'Más de €50/hora', test: (p) => p > 50 },
+    ],
+    conditionOptions: ['disponible', 'ocupado parcialmente', 'no disponible'],
+    allowRental: false, // Servicios no se "alquilan"
+    subcategories: [
+      'Chef / Cocinero',
+      'Camarero / Mesero',
+      'Barista',
+      'Sommelier',
+      'Ayudante de Cocina',
+      'Personal de Limpieza',
+      'Recepcionista',
+      'Gerente de Restaurante',
+      'Nutricionista',
+      'Consultoria de Negocio',
+      'Marketing y Publicidad',
+      'Contabilidad y Finanzas',
+      'Mantenimiento y Reparaciones',
+      'Diseño de Interiores',
+      'Fotografía Gastronómica',
+      'Otros servicios'
+    ],
+  },
 };
 
-// Helpers de tipos unificados (solo Venta, Compra, Alquiler)
-export function matchesUnifiedType(selected: UnifiedTypeFilter, rawTipo: string): boolean {
+// Helpers de tipos unificados
+export function matchesUnifiedType(selected: UnifiedTypeFilter | string, rawTipo: string): boolean {
   if (selected === 'todos') return true;
   if (selected === 'venta') return rawTipo === 'vendo';
-  if (selected === 'compra') return rawTipo === 'compro';
+  if (selected === 'compra') return rawTipo === 'busco' || rawTipo === 'compro';
   if (selected === 'alquiler') return rawTipo === 'alquilo' || rawTipo === 'busco_alquiler';
+  if (selected === 'servicio') return rawTipo === 'oferta' || rawTipo === 'busco_servicio';
+  if (selected === 'busco_servicio') return rawTipo === 'busco_servicio';
   return true;
 }
 
 export function getUnifiedTypeLabel(rawTipo: string): 'VENTA' | 'COMPRA' | 'ALQUILER' | 'SERVICIO' {
   if (rawTipo === 'vendo') return 'VENTA';
-  if (rawTipo === 'compro') return 'COMPRA';
+  if (rawTipo === 'busco' || rawTipo === 'compro') return 'COMPRA';
   if (rawTipo === 'alquilo' || rawTipo === 'busco_alquiler') return 'ALQUILER';
+  if (rawTipo === 'oferta' || rawTipo === 'busco_servicio') return 'SERVICIO';
   return 'SERVICIO';
 }
 
 export function getUnifiedTypeColor(rawTipo: string): string {
   if (rawTipo === 'vendo') return 'bg-blue-100 text-blue-800 border-blue-200';
-  if (rawTipo === 'compro') return 'bg-purple-100 text-purple-800 border-purple-200';
+  if (rawTipo === 'busco' || rawTipo === 'compro') return 'bg-purple-100 text-purple-800 border-purple-200';
   if (rawTipo === 'alquilo' || rawTipo === 'busco_alquiler') return 'bg-green-100 text-green-800 border-green-200';
-  return 'bg-red-100 text-red-800 border-red-200';
+  if (rawTipo === 'oferta' || rawTipo === 'busco_servicio') return 'bg-orange-100 text-orange-800 border-orange-200';
+  return 'bg-gray-100 text-gray-800 border-gray-200';
+}
+
+// Helper específico para servicios
+export function getServiceTypeLabel(rawTipo: string): 'OFREZCO' | 'BUSCO' | 'SERVICIO' {
+  if (rawTipo === 'oferta') return 'OFREZCO';
+  if (rawTipo === 'busco_servicio') return 'BUSCO';
+  return 'SERVICIO';
+}
+
+export function getServiceTypeColor(rawTipo: string): string {
+  if (rawTipo === 'oferta') return 'bg-orange-100 text-orange-800 border-orange-200';
+  if (rawTipo === 'busco_servicio') return 'bg-orange-100 text-orange-800 border-orange-200';
+  return 'bg-orange-100 text-orange-800 border-orange-200';
+}
+
+// Helper para obtener tipos permitidos por categoría
+export function getAllowedTypesForCategory(categoryKey: ContratarCategoryKey): Array<{ id: string; label: string }> {
+  const config = contratarConfig[categoryKey];
+  const baseTypes = [
+    { id: 'venta', label: 'Venta' },
+    { id: 'compra', label: 'Compra' },
+  ];
+
+  if (config.allowRental) {
+    baseTypes.push({ id: 'alquiler', label: 'Alquiler' });
+  }
+
+  // Servicios tiene sus propios tipos
+  if (categoryKey === 'servicios') {
+    return [
+      { id: 'servicio', label: 'Ofrecer Servicio' },
+      { id: 'busco_servicio', label: 'Busco Servicio' },
+    ];
+  }
+
+  return baseTypes;
 }
 
 

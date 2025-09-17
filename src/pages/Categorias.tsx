@@ -3,21 +3,19 @@ import { motion } from "framer-motion";
 import { useNavigationTransition, pageTransitionVariants, cardVariants } from "@/hooks/useNavigationTransition";
 import { useAnunciosSimple } from "@/hooks/useAnunciosSimple";
 import { AnuncioCard } from "@/components/AnuncioCard";
-import { CategoryFilters } from "@/components/CategoryFilters";
+import { contratarConfig, matchesUnifiedType, getUnifiedTypeColor, getUnifiedTypeLabel } from "@/lib/contratarConfig";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
-  Search,
-  MapPin,
-  Clock,
-  Users,
   AlertTriangle,
-  TrendingUp,
-  Star,
-  Euro,
-  Filter,
   ChevronRight,
   Wrench,
   Sofa,
@@ -26,11 +24,9 @@ import {
   Wine,
   Truck,
   UserCheck,
-  Eye,
-  MessageCircle,
-  Grid,
-  List,
-  X
+  Filter,
+  X,
+  Search
 } from "lucide-react";
 
 // Category configurations matching the sidebar structure
@@ -43,382 +39,457 @@ interface CategoryConfig {
   description: string;
 }
 
-// Categories configuration matching the sidebar structure
+// Categories configuration matching the actual pages with correct icons
 const categories: CategoryConfig[] = [
   {
     key: "maquinaria",
     name: "Maquinaria",
-    icon: Wrench,
-    color: "text-repsol-blue",
-    gradient: "from-blue-500 to-indigo-500",
+    icon: Wrench,  // Corrected to match sidebar and intended use
+    color: "text-repsol-orange",
+    gradient: "from-repsol-blue to-repsol-orange",
     description: "Equipamiento y maquinaria profesional"
   },
   {
     key: "mobiliario",
     name: "Mobiliario",
     icon: Sofa,
-    color: "text-repsol-blue",
-    gradient: "from-green-500 to-emerald-500",
+    color: "text-repsol-orange",
+    gradient: "from-repsol-blue to-repsol-orange",
     description: "Muebles y decoración para hostelería"
   },
   {
     key: "utensilios",
     name: "Utensilios",
     icon: Utensils,
-    color: "text-repsol-blue",
-    gradient: "from-orange-500 to-red-500",
+    color: "text-repsol-orange",
+    gradient: "from-repsol-blue to-repsol-orange",
     description: "Herramientas y utensilios de cocina"
   },
   {
     key: "menaje",
     name: "Menaje",
     icon: Package,
-    color: "text-repsol-blue",
-    gradient: "from-purple-500 to-pink-500",
+    color: "text-repsol-orange",
+    gradient: "from-repsol-blue to-repsol-orange",
     description: "Vajilla, cristalería y mantelería"
   },
   {
     key: "bodega",
     name: "Bodega",
     icon: Wine,
-    color: "text-repsol-blue",
-    gradient: "from-red-500 to-rose-500",
+    color: "text-repsol-orange",
+    gradient: "from-repsol-blue to-repsol-orange",
     description: "Vinos, licores y bebidas"
   },
   {
     key: "aprovisionamientos",
     name: "Aprovisionamientos",
     icon: Truck,
-    color: "text-repsol-blue",
-    gradient: "from-indigo-500 to-blue-500",
+    color: "text-repsol-orange",
+    gradient: "from-repsol-blue to-repsol-orange",
     description: "Ingredientes y suministros"
   },
   {
     key: "servicios",
     name: "Servicios",
     icon: UserCheck,
-    color: "text-repsol-blue",
-    gradient: "from-emerald-500 to-green-500",
+    color: "text-repsol-orange",
+    gradient: "from-repsol-blue to-repsol-orange",
     description: "Servicios profesionales"
   }
 ];
 
 export default function Categorias() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("todas");
-  const [distanceFilter, setDistanceFilter] = useState("todas");
-  const [networkFilter, setNetworkFilter] = useState("todas");
-  const [urgencyFilter, setUrgencyFilter] = useState("todas");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  // Initialize navigation transition
+  const { navigateWithDelay } = useNavigationTransition();
+  
+  // Get real data from database
+  const { anuncios, loading, error, refresh } = useAnunciosSimple();
 
-  const filteredAnnouncements = mockAnnouncements.filter(announcement => {
-    const matchesSearch = announcement.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         announcement.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "todas" || announcement.category === selectedCategory;
-    const matchesDistance = distanceFilter === "todas" || 
-                           (distanceFilter === "5km" && announcement.distance <= 5) ||
-                           (distanceFilter === "10km" && announcement.distance <= 10) ||
-                           (distanceFilter === "20km" && announcement.distance <= 20);
-    const matchesNetwork = networkFilter === "todas" || 
-                          (networkFilter === "red" && announcement.user.isInNetwork);
-    const matchesUrgency = urgencyFilter === "todas" || announcement.urgency === urgencyFilter;
+  // Filters state - comprehensive filtering
+  const [priceFilter, setPriceFilter] = useState("todos");
+  const [locationFilter, setLocationFilter] = useState("todos");
+  const [conditionFilter, setConditionFilter] = useState("todos");
+  const [typeFilter, setTypeFilter] = useState("todos");
+
+  // Complete filter configuration
+  const filterConfig = {
+    priceRanges: [
+      { id: 'hasta_500', label: 'Hasta 500€', test: (price: number) => price <= 500 },
+      { id: '500_1000', label: '500€ - 1.000€', test: (price: number) => price >= 500 && price <= 1000 },
+      { id: '1000_5000', label: '1.000€ - 5.000€', test: (price: number) => price >= 1000 && price <= 5000 },
+      { id: 'mas_5000', label: 'Más de 5.000€', test: (price: number) => price > 5000 }
+    ],
+    locations: [
+      { id: 'madrid', label: 'Madrid' },
+      { id: 'barcelona', label: 'Barcelona' },
+      { id: 'valencia', label: 'Valencia' },
+      { id: 'sevilla', label: 'Sevilla' },
+      { id: 'bilbao', label: 'Bilbao' },
+      { id: 'otras', label: 'Otras ubicaciones' }
+    ],
+    conditions: [
+      { id: 'nuevo', label: 'Nuevo' },
+      { id: 'como_nuevo', label: 'Como nuevo' },
+      { id: 'buen_estado', label: 'Buen estado' },
+      { id: 'usado', label: 'Usado' },
+      { id: 'para_reparar', label: 'Para reparar' }
+    ],
+    types: [
+      { id: 'venta', label: 'Venta' },
+      { id: 'compra', label: 'Compra' },
+      { id: 'alquiler', label: 'Alquiler' },
+      { id: 'servicio', label: 'Servicio' }
+    ]
+  };
+
+  // Apply filters to anuncios
+  const filteredAnuncios = anuncios.filter(anuncio => {
+    // Price filter
+    const matchesPrice = priceFilter === "todos" || 
+      (anuncio.precio != null && filterConfig.priceRanges.some(r => 
+        r.id === priceFilter && r.test ? r.test(parseInt(anuncio.precio.toString())) : true
+      ));
     
-    return matchesSearch && matchesCategory && matchesDistance && matchesNetwork && matchesUrgency;
+    // Location filter
+    const matchesLocation = locationFilter === "todos" || locationFilter === "otras" ||
+      (typeof anuncio.ubicacion === 'string' 
+        ? anuncio.ubicacion.toLowerCase().includes(locationFilter.toLowerCase())
+        : anuncio.ubicacion?.region?.toLowerCase().includes(locationFilter.toLowerCase())
+      );
+    
+    // Condition filter
+    const matchesCondition = conditionFilter === "todos" || 
+      (anuncio.estado_producto && anuncio.estado_producto.toLowerCase().replace(/\s+/g, '_').includes(conditionFilter.toLowerCase()));
+    
+    // Type filter using unified matching
+    const matchesType = typeFilter === "todos" || 
+      matchesUnifiedType(typeFilter as any, anuncio.tipo || (anuncio.actor_type === 'provider' ? 'oferta' : 'vendo'));
+
+    return matchesPrice && matchesLocation && matchesCondition && matchesType;
   });
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "alta":
-        return "bg-red-100 text-red-800 border-red-200";
-      case "media":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "baja":
-        return "bg-green-100 text-green-800 border-green-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+  const getConditionColor = (estado: string) => {
+    switch (estado?.toLowerCase()) {
+      case 'nuevo': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'como nuevo': return 'bg-green-100 text-green-800 border-green-200';
+      case 'buen estado': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'usado': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'para reparar': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "vendo":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "busco":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "oferta":
-        return "bg-green-100 text-green-800 border-green-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES');
   };
 
-  const getAnnouncementsByCategory = (categoryName: string) => {
-    return filteredAnnouncements.filter(announcement => announcement.category === categoryName);
+  const clearFilters = () => {
+    setPriceFilter("todos");
+    setLocationFilter("todos");
+    setConditionFilter("todos");
+    setTypeFilter("todos");
+  };
+
+  // Group anuncios by category
+  const getAnunciosByCategory = (categoryKey: string) => {
+    return filteredAnuncios.filter(anuncio => 
+      anuncio.categoria.toLowerCase() === categoryKey.toLowerCase()
+    );
   };
 
   return (
-    <main className="flex-1 p-6 overflow-hidden">
-      <div className="w-full space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-2">Explorar Categorías</h1>
-          <p className="text-muted-foreground">
-            Encuentra productos, servicios y personal para tu restaurante
-          </p>
-        </div>
-
-        {/* Enhanced Filters */}
-        <Card className="shadow-sm">
+    <motion.main 
+      className="flex-1 p-6"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransitionVariants}
+    >
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Modern Filters */}
+        <Card className="border border-gray-200 shadow-sm bg-white">
           <CardContent className="p-6">
-            <div className="space-y-6">
-              {/* Enhanced Search Bar - Navbar Style */}
-              <div className="max-w-2xl mx-auto">
-                <div className="flex items-center bg-muted rounded-lg px-4 py-3">
-                  <Search className="w-4 h-4 text-muted-foreground mr-2" />
-                  <input 
-                    type="text" 
-                    placeholder="Buscar productos, servicios, personal..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-transparent border-none outline-none flex-1 text-sm"
-                  />
-                </div>
-                
-                {/* Search Suggestions */}
-                {searchQuery && (
-                  <div className="mt-2 border border-border rounded-lg bg-background">
-                    <div className="p-2">
-                      <div className="text-xs font-medium text-muted-foreground mb-2">Sugerencias</div>
-                      <div className="space-y-1">
-                        <button 
-                          onClick={() => setSearchQuery("maquinaria cocina")}
-                          className="w-full text-left px-2 py-1 text-sm hover:bg-muted rounded flex items-center gap-2"
-                        >
-                          <Search className="h-3 w-3 text-muted-foreground" />
-                          maquinaria cocina
-                        </button>
-                        <button 
-                          onClick={() => setSearchQuery("chef temporal")}
-                          className="w-full text-left px-2 py-1 text-sm hover:bg-muted rounded flex items-center gap-2"
-                        >
-                          <Search className="h-3 w-3 text-muted-foreground" />
-                          chef temporal
-                        </button>
-                        <button 
-                          onClick={() => setSearchQuery("mobiliario restaurante")}
-                          className="w-full text-left px-2 py-1 text-sm hover:bg-muted rounded flex items-center gap-2"
-                        >
-                          <Search className="h-3 w-3 text-muted-foreground" />
-                          mobiliario restaurante
-                        </button>
-                      </div>
-                    </div>
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-repsol-blue rounded-lg shadow-md">
+                    <Filter className="h-5 w-5 text-white" />
                   </div>
-                )}
-              </div>
-
-              {/* Filter Controls */}
-              <div className="flex flex-wrap gap-3 justify-center">
-                <Select value={distanceFilter} onValueChange={setDistanceFilter}>
-                  <SelectTrigger className="w-auto min-w-32">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Distancia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todas">Cualquier distancia</SelectItem>
-                    <SelectItem value="5km">Hasta 5 km</SelectItem>
-                    <SelectItem value="10km">Hasta 10 km</SelectItem>
-                    <SelectItem value="20km">Hasta 20 km</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={networkFilter} onValueChange={setNetworkFilter}>
-                  <SelectTrigger className="w-auto min-w-32">
-                    <Users className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Red" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todas">Todos los usuarios</SelectItem>
-                    <SelectItem value="red">Solo mi red</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
-                  <SelectTrigger className="w-auto min-w-32">
-                    <Clock className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Urgencia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todas">Todas</SelectItem>
-                    <SelectItem value="alta">Alta</SelectItem>
-                    <SelectItem value="media">Media</SelectItem>
-                    <SelectItem value="baja">Baja</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button variant="outline" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  Más filtros
-                </Button>
-                
-                {(searchQuery || distanceFilter !== "todas" || networkFilter !== "todas" || urgencyFilter !== "todas") && (
-                  <Button 
-                    variant="ghost" 
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Filtros</h3>
+                    <p className="text-sm text-gray-600">{filteredAnuncios.length} de {anuncios.length} anuncios</p>
+                  </div>
+                </div>
+                {(priceFilter !== "todos" || locationFilter !== "todos" || conditionFilter !== "todos" || typeFilter !== "todos") && (
+                  <Button
+                    variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setDistanceFilter("todas");
-                      setNetworkFilter("todas");
-                      setUrgencyFilter("todas");
-                    }}
-                    className="gap-2 text-muted-foreground hover:text-foreground"
+                    onClick={clearFilters}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 gap-2"
                   >
                     <X className="h-4 w-4" />
                     Limpiar filtros
                   </Button>
                 )}
               </div>
+
+              {/* Filters Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Price Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Precio</label>
+                  <Select value={priceFilter} onValueChange={setPriceFilter}>
+                    <SelectTrigger className="h-10 bg-white border-gray-300 focus:border-repsol-blue focus:ring-repsol-blue">
+                      <SelectValue placeholder="Todos los precios" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos los precios</SelectItem>
+                      {filterConfig.priceRanges.map((range) => (
+                        <SelectItem key={range.id} value={range.id}>
+                          {range.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Location Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Ubicación</label>
+                  <Select value={locationFilter} onValueChange={setLocationFilter}>
+                    <SelectTrigger className="h-10 bg-white border-gray-300 focus:border-repsol-blue focus:ring-repsol-blue">
+                      <SelectValue placeholder="Todas las ubicaciones" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todas las ubicaciones</SelectItem>
+                      {filterConfig.locations.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Condition Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Estado</label>
+                  <Select value={conditionFilter} onValueChange={setConditionFilter}>
+                    <SelectTrigger className="h-10 bg-white border-gray-300 focus:border-repsol-blue focus:ring-repsol-blue">
+                      <SelectValue placeholder="Todos los estados" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos los estados</SelectItem>
+                      {filterConfig.conditions.map((condition) => (
+                        <SelectItem key={condition.id} value={condition.id}>
+                          {condition.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Type Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Tipo</label>
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="h-10 bg-white border-gray-300 focus:border-repsol-blue focus:ring-repsol-blue">
+                      <SelectValue placeholder="Todos los tipos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos los tipos</SelectItem>
+                      {filterConfig.types.map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Active filters display */}
+              {(priceFilter !== "todos" || locationFilter !== "todos" || conditionFilter !== "todos" || typeFilter !== "todos") && (
+                <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                  <span className="text-sm text-gray-600">Filtros activos:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {priceFilter !== "todos" && (
+                      <Badge variant="secondary" className="bg-repsol-blue/10 text-repsol-blue border-repsol-blue/20">
+                        {filterConfig.priceRanges.find(r => r.id === priceFilter)?.label}
+                      </Badge>
+                    )}
+                    {locationFilter !== "todos" && (
+                      <Badge variant="secondary" className="bg-repsol-blue/10 text-repsol-blue border-repsol-blue/20">
+                        {filterConfig.locations.find(l => l.id === locationFilter)?.label}
+                      </Badge>
+                    )}
+                    {conditionFilter !== "todos" && (
+                      <Badge variant="secondary" className="bg-repsol-blue/10 text-repsol-blue border-repsol-blue/20">
+                        {filterConfig.conditions.find(c => c.id === conditionFilter)?.label}
+                      </Badge>
+                    )}
+                    {typeFilter !== "todos" && (
+                      <Badge variant="secondary" className="bg-repsol-orange/10 text-repsol-orange border-repsol-orange/20">
+                        {filterConfig.types.find(t => t.id === typeFilter)?.label}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Categories with Horizontal Scroll */}
-        <div className="space-y-8">
-          {categorySummaries.map((category) => {
-            const categoryAnnouncements = getAnnouncementsByCategory(category.name);
-            
-            if (categoryAnnouncements.length === 0) return null;
+        {/* Error State */}
+        {error && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-4 text-center">
+              <AlertTriangle className="h-6 w-6 text-red-600 mx-auto mb-2" />
+              <p className="text-red-600 mb-2">Error cargando los anuncios: {error}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={refresh}
+                className="text-red-600 border-red-300 hover:bg-red-100"
+              >
+                Reintentar
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
-            return (
-              <div key={category.name} className="space-y-4">
-                {/* Category Header */}
-                <div className="flex items-center justify-between">
+        {/* Loading State */}
+        {loading && (
+          <div className="space-y-8">
+            {categories.map((category) => (
+              <div key={category.key} className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center`}>
-                      <category.icon className="h-5 w-5 text-white" />
-                    </div>
+                  <div className="w-10 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
                     <div>
-                      <h2 className="text-xl font-semibold">{category.name}</h2>
-                      <p className="text-sm text-muted-foreground">
-                        {categoryAnnouncements.length} anuncios • {category.urgentCount} urgentes
-                      </p>
-                    </div>
+                    <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mb-2"></div>
+                    <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
                   </div>
-                  <Button variant="ghost" size="sm" className="gap-1">
-                    Ver todos
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
                 </div>
-
-                {/* Auto-fit Single Row Grid */}
-                <div className="grid gap-4 pb-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-                  {categoryAnnouncements.map((announcement) => (
-                    <Card key={announcement.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                      <CardContent className="p-4">
-                        <div className="space-y-3">
-                          {/* Header */}
-                          <div className="flex items-start justify-between">
-                            <div className="flex gap-2">
-                              <Badge 
-                                variant="outline" 
-                                className={getTypeColor(announcement.type)}
-                              >
-                                {announcement.type.toUpperCase()}
-                              </Badge>
-                              <Badge 
-                                variant="outline" 
-                                className={getUrgencyColor(announcement.urgency)}
-                              >
-                                {announcement.urgency.toUpperCase()}
-                              </Badge>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Card key={i} className="animate-pulse">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="aspect-video bg-gray-200 rounded"></div>
+                        <div className="space-y-2">
+                          <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+                          <div className="h-3 w-full bg-gray-200 rounded"></div>
                             </div>
-                            {announcement.price && (
-                              <div className="text-lg font-bold text-primary">
-                                {announcement.price}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Content */}
-                          <div>
-                            <h3 className="font-semibold mb-2 line-clamp-1">{announcement.title}</h3>
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {announcement.description}
-                            </p>
-                          </div>
-
-                          {/* User Info */}
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={announcement.user.avatar} alt={announcement.user.name} />
-                              <AvatarFallback>
-                                {announcement.user.name.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{announcement.user.name}</p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {announcement.user.restaurant}
-                              </p>
-                            </div>
-                            {announcement.user.isInNetwork && (
-                              <Badge variant="outline" className="text-blue-600 border-blue-200">
-                                <Users className="h-3 w-3" />
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Footer */}
-                          <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                <span>{announcement.distance}km</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Eye className="h-3 w-3" />
-                                <span>{announcement.views}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <MessageCircle className="h-3 w-3" />
-                                <span>{announcement.responses}</span>
-                              </div>
-                            </div>
-                            <span>{announcement.createdAt}</span>
-                          </div>
+                        <div className="flex justify-between">
+                          <div className="h-6 w-20 bg-gray-200 rounded"></div>
+                          <div className="h-8 w-24 bg-gray-200 rounded"></div>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-                
-                {/* Show More Button */}
-                {categoryAnnouncements.length > 4 && (
-                  <div className="text-center pt-4">
-                    <Button variant="outline" className="gap-2">
-                      Ver más anuncios de {category.name}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Categories with Anuncios */}
+        {!loading && !error && (
+          <div className="space-y-8">
+            {categories.map((category) => {
+              const categoryAnuncios = getAnunciosByCategory(category.key);
+              
+              if (categoryAnuncios.length === 0) return null;
+
+              return (
+                <motion.div
+                  key={category.key}
+                  variants={cardVariants}
+                  initial="initial"
+                  animate="animate"
+                  className="space-y-4"
+                >
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${category.gradient} flex items-center justify-center shadow-md`}>
+                        <category.icon className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-semibold text-gray-900">{category.name}</h2>
+                        <p className="text-sm text-gray-600">
+                          {categoryAnuncios.length} anuncios disponibles
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-1 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                      onClick={() => navigateWithDelay(`/platform/contratar/${category.key}`)}
+                    >
+                      Ver todos
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Anuncios Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {categoryAnuncios.slice(0, 8).map((anuncio) => (
+                      <AnuncioCard
+                        key={anuncio.id}
+                        anuncio={anuncio}
+                        getTypeColor={getUnifiedTypeColor}
+                        getTypeLabel={getUnifiedTypeLabel}
+                        getConditionColor={getConditionColor}
+                        formatDate={formatDate}
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Show More Button */}
+                  {categoryAnuncios.length > 8 && (
+                    <div className="text-center pt-4">
+                      <Button 
+                        variant="outline" 
+                        className="gap-2 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300"
+                        onClick={() => navigateWithDelay(`/platform/contratar/${category.key}`)}
+                      >
+                        Ver más anuncios de {category.name}
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
-              </div>
+                </motion.div>
             );
           })}
         </div>
+        )}
 
         {/* Empty State */}
-        {filteredAnnouncements.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No se encontraron anuncios</h3>
-              <p className="text-muted-foreground">
-                Prueba a ajustar los filtros o amplia tu área de búsqueda
+        {!loading && !error && filteredAnuncios.length === 0 && (
+          <Card className="border-dashed border-2 border-gray-300">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <Search className="h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No se encontraron anuncios
+              </h3>
+              <p className="text-gray-600 max-w-sm mb-4">
+                {anuncios.length === 0 
+                  ? "No hay anuncios disponibles en este momento."
+                  : "Intenta ajustar los filtros para ver más resultados."
+                }
               </p>
+              {anuncios.length > 0 && (
+                <Button variant="outline" onClick={clearFilters}>
+                  Limpiar filtros
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
       </div>
-    </main>
+    </motion.main>
   );
 }

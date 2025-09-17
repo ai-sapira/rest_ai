@@ -71,10 +71,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => window.location.reload()} 
+                onClick={() => this.setState({ hasError: false, error: null })} 
                 className="w-full"
               >
-                Recargar página
+                Reiniciar componente
               </Button>
             </div>
             {process.env.NODE_ENV === 'development' && this.state.errorInfo && (

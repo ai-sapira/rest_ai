@@ -47,6 +47,28 @@ import {
 
 export default function Profile() {
   const { userId } = useParams<{ userId?: string }>();
+
+  // Helper function to get price display for any anuncio type
+  const getPriceDisplay = (anuncio: any) => {
+    if (anuncio.tipo === 'alquilo') {
+      const prices = [];
+      if (anuncio.precio_alquiler_dia) prices.push(`€${anuncio.precio_alquiler_dia}/día`);
+      if (anuncio.precio_alquiler_semana) prices.push(`€${anuncio.precio_alquiler_semana}/sem`);
+      if (anuncio.precio_alquiler_mes) prices.push(`€${anuncio.precio_alquiler_mes}/mes`);
+      
+      if (prices.length > 0) {
+        return prices[0];
+      }
+    } else if (anuncio.tipo === 'busco_alquiler') {
+      if (anuncio.precio_alquiler_mes) {
+        return `Hasta €${anuncio.precio_alquiler_mes}/mes`;
+      }
+    } else if (anuncio.precio) {
+      return `€${Number(anuncio.precio).toLocaleString()}`;
+    }
+    
+    return 'Consultar';
+  };
   const { user } = useAuth();
   const navigate = useNavigate();
   const isOwnProfile = !userId || userId === user?.id;
@@ -837,7 +859,7 @@ export default function Profile() {
                             <h3 className="font-semibold">{anuncio.titulo}</h3>
                             <p className="text-sm text-muted-foreground">{anuncio.categoria} • {anuncio.subcategoria}</p>
                             <div className="flex items-center gap-4 mt-1">
-                              <span className="font-medium">€{anuncio.precio ? Number(anuncio.precio).toLocaleString() : '0'}</span>
+                              <span className="font-medium">{getPriceDisplay(anuncio)}</span>
                               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Eye className="h-3 w-3" />

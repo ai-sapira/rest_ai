@@ -1,19 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { pageTransitionVariants, cardVariants } from "@/hooks/useNavigationTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Search,
   Users,
   MapPin,
   UserPlus,
@@ -21,7 +15,6 @@ import {
   Phone,
   Mail,
   Star,
-  Filter,
   UserCheck,
   UserX,
   Building,
@@ -30,7 +23,8 @@ import {
   Send,
   Inbox,
   CheckCircle,
-  XCircle
+  XCircle,
+  Eye
 } from "lucide-react";
 
 interface Contact {
@@ -210,10 +204,8 @@ const mockInvitations: Invitation[] = [
 ];
 
 export default function MiRed() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("mi-red");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [locationFilter, setLocationFilter] = useState("todas");
-  const [specialtyFilter, setSpecialtyFilter] = useState("todas");
   const [myNetwork, setMyNetwork] = useState(mockMyNetwork);
   const [suggestions, setSuggestions] = useState(mockSuggestions);
   const [invitations, setInvitations] = useState(mockInvitations);
@@ -253,93 +245,39 @@ export default function MiRed() {
     setInvitations(invitations.filter(inv => inv.id !== invitationId));
   };
 
-  const filteredNetwork = myNetwork.filter(contact => {
-    const matchesSearch = contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         contact.restaurant.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesLocation = locationFilter === "todas" || contact.location === locationFilter;
-    const matchesSpecialty = specialtyFilter === "todas" || 
-                           contact.specialties.some(s => s.toLowerCase().includes(specialtyFilter.toLowerCase()));
-    return matchesSearch && matchesLocation && matchesSpecialty;
-  });
+  const handleViewProfile = (contactId: string) => {
+    navigate(`/platform/user/${contactId}`);
+  };
 
-  const filteredSuggestions = suggestions.filter(contact => {
-    const matchesSearch = contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         contact.restaurant.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesLocation = locationFilter === "todas" || contact.location === locationFilter;
-    const matchesSpecialty = specialtyFilter === "todas" || 
-                           contact.specialties.some(s => s.toLowerCase().includes(specialtyFilter.toLowerCase()));
-    return matchesSearch && matchesLocation && matchesSpecialty;
-  });
+  const handleFollowUser = (contactId: string) => {
+    // This will be implemented when we integrate with real data
+    console.log('Follow user:', contactId);
+  };
+
+  const filteredNetwork = myNetwork;
+  const filteredSuggestions = suggestions;
 
   return (
-    <main className="flex-1 p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <motion.div
+      className="container mx-auto px-4 py-8"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransitionVariants}
+    >
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <motion.div 
+          className="flex items-center justify-between"
+          variants={cardVariants}
+        >
           <div>
-            <h1 className="text-3xl font-bold">Mi Red</h1>
+            <h1 className="text-3xl font-bold text-foreground">Mi Red</h1>
             <p className="text-muted-foreground">
               Conecta y colabora con otros profesionales de la hostelería
             </p>
           </div>
-        </div>
-
-        {/* Search and Filters */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              {/* Search */}
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nombre o restaurante..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              
-              {/* Filters */}
-              <div className="flex gap-3">
-                <Select value={locationFilter} onValueChange={setLocationFilter}>
-                  <SelectTrigger className="w-44 h-10 bg-background/95 backdrop-blur-sm border-border/60 shadow-sm hover:border-border hover:bg-background/80 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Ubicación" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-background/95 backdrop-blur-md border-border/60 shadow-lg">
-                    <SelectItem value="todas" className="focus:bg-accent/50">Ubicación</SelectItem>
-                    <SelectItem value="Madrid" className="focus:bg-accent/50">Madrid</SelectItem>
-                    <SelectItem value="Barcelona" className="focus:bg-accent/50">Barcelona</SelectItem>
-                    <SelectItem value="Valencia" className="focus:bg-accent/50">Valencia</SelectItem>
-                    <SelectItem value="Sevilla" className="focus:bg-accent/50">Sevilla</SelectItem>
-                    <SelectItem value="Bilbao" className="focus:bg-accent/50">Bilbao</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
-                  <SelectTrigger className="w-44 h-10 bg-background/95 backdrop-blur-sm border-border/60 shadow-sm hover:border-border hover:bg-background/80 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200">
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Especialidad" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-background/95 backdrop-blur-md border-border/60 shadow-lg">
-                    <SelectItem value="todas" className="focus:bg-accent/50">Todas</SelectItem>
-                    <SelectItem value="mediterránea" className="focus:bg-accent/50">Mediterránea</SelectItem>
-                    <SelectItem value="mariscos" className="focus:bg-accent/50">Mariscos</SelectItem>
-                    <SelectItem value="pizza" className="focus:bg-accent/50">Pizza</SelectItem>
-                    <SelectItem value="vegana" className="focus:bg-accent/50">Vegana</SelectItem>
-                    <SelectItem value="carnes" className="focus:bg-accent/50">Carnes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        </motion.div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -362,80 +300,78 @@ export default function MiRed() {
           <TabsContent value="mi-red" className="space-y-4 mt-6">
             <div className="grid gap-4">
               {filteredNetwork.map((contact) => (
-                <Card key={contact.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4">
-                        <div className="relative">
-                          <Avatar className="h-16 w-16">
-                            <AvatarImage src={contact.avatar} alt={contact.name} />
-                            <AvatarFallback>
-                              {contact.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                            contact.status === "online" ? "bg-green-500" : "bg-gray-400"
-                          }`} />
+                  <Card key={contact.id} className="hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => handleViewProfile(contact.id)}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4 flex-1">
+                          <div className="relative">
+                            <Avatar className="h-16 w-16">
+                              <AvatarImage src={contact.avatar} alt={contact.name} />
+                              <AvatarFallback>
+                                {contact.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                              contact.status === "online" ? "bg-green-500" : "bg-gray-400"
+                            }`} />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-lg">{contact.name}</h3>
+                              <div className="flex items-center gap-1">
+                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                <span className="text-sm font-medium">{contact.rating}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                              <Building className="h-4 w-4" />
+                              <span>{contact.restaurant}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-muted-foreground mb-3">
+                              <MapPin className="h-4 w-4" />
+                              <span>{contact.location}</span>
+                              <span>•</span>
+                              <Users className="h-4 w-4" />
+                              <span>{contact.mutualConnections} conexiones mutuas</span>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {contact.specialties.map((specialty, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {specialty}
+                                </Badge>
+                              ))}
+                            </div>
+                            
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>Última actividad: {contact.lastActivity}</span>
+                              </div>
+                              <span>Conectado {contact.joinedDate}</span>
+                            </div>
+                          </div>
                         </div>
                         
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-lg">{contact.name}</h3>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                              <span className="text-sm font-medium">{contact.rating}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                            <Building className="h-4 w-4" />
-                            <span>{contact.restaurant}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 text-muted-foreground mb-3">
-                            <MapPin className="h-4 w-4" />
-                            <span>{contact.location}</span>
-                            <span>•</span>
-                            <Users className="h-4 w-4" />
-                            <span>{contact.mutualConnections} conexiones mutuas</span>
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {contact.specialties.map((specialty, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {specialty}
-                              </Badge>
-                            ))}
-                          </div>
-                          
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>Última actividad: {contact.lastActivity}</span>
-                            </div>
-                            <span>Conectado {contact.joinedDate}</span>
-                          </div>
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="outline" size="sm">
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDisconnect(contact.id)}
+                          >
+                            <UserX className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
-                          <MessageCircle className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleDisconnect(contact.id)}
-                        >
-                          <UserX className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
               ))}
               
               {filteredNetwork.length === 0 && (
@@ -456,78 +392,78 @@ export default function MiRed() {
           <TabsContent value="sugerencias" className="space-y-4 mt-6">
             <div className="grid gap-4">
               {filteredSuggestions.map((contact) => (
-                <Card key={contact.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4">
-                        <div className="relative">
-                          <Avatar className="h-16 w-16">
-                            <AvatarImage src={contact.avatar} alt={contact.name} />
-                            <AvatarFallback>
-                              {contact.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                            contact.status === "online" ? "bg-green-500" : "bg-gray-400"
-                          }`} />
+                  <Card key={contact.id} className="hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => handleViewProfile(contact.id)}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4 flex-1">
+                          <div className="relative">
+                            <Avatar className="h-16 w-16">
+                              <AvatarImage src={contact.avatar} alt={contact.name} />
+                              <AvatarFallback>
+                                {contact.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                              contact.status === "online" ? "bg-green-500" : "bg-gray-400"
+                            }`} />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-lg">{contact.name}</h3>
+                              <div className="flex items-center gap-1">
+                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                <span className="text-sm font-medium">{contact.rating}</span>
+                              </div>
+                              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
+                                Nuevo
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                              <Building className="h-4 w-4" />
+                              <span>{contact.restaurant}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-muted-foreground mb-3">
+                              <MapPin className="h-4 w-4" />
+                              <span>{contact.location}</span>
+                              <span>•</span>
+                              <Users className="h-4 w-4" />
+                              <span>{contact.mutualConnections} conexiones mutuas</span>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {contact.specialties.map((specialty, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {specialty}
+                                </Badge>
+                              ))}
+                            </div>
+                            
+                            <div className="text-xs text-muted-foreground">
+                              Se unió {contact.joinedDate}
+                            </div>
+                          </div>
                         </div>
                         
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-lg">{contact.name}</h3>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                              <span className="text-sm font-medium">{contact.rating}</span>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              Nuevo
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                            <Building className="h-4 w-4" />
-                            <span>{contact.restaurant}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 text-muted-foreground mb-3">
-                            <MapPin className="h-4 w-4" />
-                            <span>{contact.location}</span>
-                            <span>•</span>
-                            <Users className="h-4 w-4" />
-                            <span>{contact.mutualConnections} conexiones mutuas</span>
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {contact.specialties.map((specialty, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {specialty}
-                              </Badge>
-                            ))}
-                          </div>
-                          
-                          <div className="text-xs text-muted-foreground">
-                            Se unió {contact.joinedDate}
-                          </div>
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="outline" size="sm">
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm"
+                            onClick={() => handleConnect(contact.id)}
+                            className="gap-2 bg-primary hover:bg-primary/90"
+                          >
+                            <UserPlus className="h-4 w-4" />
+                            Conectar
+                          </Button>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
-                          <MessageCircle className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          onClick={() => handleConnect(contact.id)}
-                          className="gap-2"
-                        >
-                          <UserPlus className="h-4 w-4" />
-                          Conectar
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
               ))}
               
               {filteredSuggestions.length === 0 && (
@@ -741,6 +677,6 @@ export default function MiRed() {
           </TabsContent>
         </Tabs>
       </div>
-    </main>
+    </motion.div>
   );
 }

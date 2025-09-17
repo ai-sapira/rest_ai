@@ -34,7 +34,9 @@ import { Label } from "@/components/ui/label";
 import { useAnuncios } from '@/hooks/useAnuncios';
 
 interface FormData {
-  type: 'vendo' | 'busco' | 'alquiler' | 'oferta' | 'ofrezco-servicio' | 'busco-contratar' | null;
+  type: 'vendo' | 'busco' | 'alquiler' | 'servicio' | null;
+  // Subtipo de servicio
+  serviceType: 'ofrezco' | 'busco' | null;
   // Subtipo de alquiler
   rentalType: 'ofrezco' | 'busco' | null;
   category: string;
@@ -86,6 +88,7 @@ interface FormData {
 
 const INITIAL_FORM_DATA: FormData = {
   type: null,
+  serviceType: null,
   rentalType: null,
   category: '',
   subcategory: '',
@@ -207,11 +210,9 @@ const COMMON_LANGUAGES = [
 ];
 
 const PRODUCT_STATES = [
-  'Nuevo',
-  'Semi-nuevo',
-  'Usado - Buen estado',
-  'Usado - Estado aceptable',
-  'Para reparar'
+  'nuevo',
+  'como nuevo',
+  'usado'
 ];
 
 const SPANISH_REGIONS = [
@@ -246,16 +247,15 @@ export default function CrearAnuncio() {
   const toast = useToast();
   const { createAnuncio } = useAnuncios();
 
-  // Helper to detect if current flow is servicios (when type is 'oferta')
-  const isServiciosCategory = formData.type === 'oferta';
+  // Helper to detect if current flow is servicios
+  const isServiciosCategory = formData.type === 'servicio';
   
-  // Always show the same options - "Oferta" will trigger servicios flow
   const getTypeOptions = () => {
     return [
       { id: 'vendo', label: 'Vendo', icon: FiPackage, description: 'Algo que ya no necesito' },
       { id: 'busco', label: 'Busco', icon: FiMapPin, description: 'Algo que necesito' },
       { id: 'alquiler', label: 'Alquiler', icon: FiDollarSign, description: 'Alquiler de equipamiento' },
-      { id: 'oferta', label: 'Oferta', icon: FiDollarSign, description: 'Un servicio' }
+      { id: 'servicio', label: 'Servicios', icon: FiDollarSign, description: 'Servicios profesionales' }
     ];
   };
 
@@ -265,10 +265,14 @@ export default function CrearAnuncio() {
 
   // Section validation
   const isSectionComplete = (section: number): boolean => {
+    const result = (() => {
     switch (section) {
       case 1: // Tipo de anuncio
         if (formData.type === 'alquiler') {
           return !!(formData.type && formData.rentalType);
+        }
+        if (formData.type === 'servicio') {
+          return !!(formData.type && formData.serviceType);
         }
         return !!formData.type;
       case 2: // Información básica
@@ -292,7 +296,9 @@ export default function CrearAnuncio() {
         }
         return !!(formData.state && formData.price);
       case 4: // Fotos
-        return formData.images.length > 0 || formData.type === 'busco';
+        return formData.images.length > 0 || 
+               formData.type === 'busco' || 
+               (formData.type === 'servicio' && formData.serviceType === 'busco');
       case 5: // Ubicación
         return !!(formData.location.region && formData.location.province && formData.location.city);
       case 6: // Especialidades y certificaciones (solo servicios)
@@ -308,6 +314,16 @@ export default function CrearAnuncio() {
       default:
         return false;
     }
+    })();
+    console.log(`🔍 Section ${section} validation:`, result, {
+      type: formData.type,
+      serviceType: formData.serviceType,
+      rentalType: formData.rentalType,
+      title: formData.title,
+      description: formData.description,
+      subcategory: formData.subcategory
+    });
+    return result;
   };
 
   // Update completed sections when form data changes
@@ -323,7 +339,7 @@ export default function CrearAnuncio() {
 
   // Auto-set category when type is selected
   useEffect(() => {
-    if (formData.type === 'oferta') {
+    if (formData.type === 'servicio') {
       setFormData(prev => ({ ...prev, category: 'servicios' }));
     } else if (formData.type === 'vendo' || formData.type === 'busco') {
       setFormData(prev => ({ ...prev, category: 'maquinaria' }));
@@ -344,7 +360,7 @@ export default function CrearAnuncio() {
   const updateNestedFormData = (field: keyof FormData, nestedField: string, value: any) => {
     setFormData(prev => ({
       ...prev,
-      [field]: { ...prev[field as keyof FormData], [nestedField]: value }
+      [field]: { ...(prev[field] as any), [nestedField]: value }
     }));
   };
 
@@ -398,64 +414,85 @@ export default function CrearAnuncio() {
   };
 
   const handlePublish = async () => {
+    console.log('🔥 handlePublish called!');
+    console.log('📊 Completed sections:', completedSections.size, 'of', totalSections);
+    console.log('📋 Form data:', formData);
     try {
       console.log('Iniciando publicación de anuncio...', formData);
       
       // Transform form data to match the database schema
-      const anuncioData = {
+      const baseData = {
         tipo: isServiciosCategory ? 
-          (formData.type === 'ofrezco-servicio' ? 'oferta' : 'busco') :
+          (formData.serviceType === 'ofrezco' ? 'oferta' as const : 'busco_servicio' as const) :
           formData.type === 'alquiler' ? 
-            (formData.rentalType === 'ofrezco' ? 'alquilo' : 'busco_alquiler') :
-            formData.type as 'vendo' | 'busco' | 'oferta',
+            (formData.rentalType === 'ofrezco' ? 'alquilo' as const : 'busco_alquiler' as const) :
+            formData.type === 'busco' ? 'compro' as const :
+            formData.type as 'vendo',
         categoria: isServiciosCategory ? 'servicios' : 'maquinaria',
         subcategoria: formData.subcategory,
         titulo: formData.title,
         descripcion: formData.description,
-        estado_producto: isServiciosCategory ? undefined : formData.state,
-        precio: formData.price ? parseFloat(formData.price) : undefined,
-        moneda: formData.currency,
-        // Campos de alquiler
-        precio_alquiler_dia: formData.rentalPriceDay ? parseFloat(formData.rentalPriceDay) : undefined,
-        precio_alquiler_semana: formData.rentalPriceWeek ? parseFloat(formData.rentalPriceWeek) : undefined,
-        precio_alquiler_mes: formData.rentalPriceMonth ? parseFloat(formData.rentalPriceMonth) : undefined,
-        dimensiones: isServiciosCategory ? undefined : {
-          width: formData.dimensions.width,
-          height: formData.dimensions.height,
-          depth: formData.dimensions.depth
-        },
+        estado_producto: isServiciosCategory ? 'nuevo' : (formData.state || 'nuevo'), // Always provide a value
+        moneda: formData.currency || 'EUR',
         ubicacion: {
           region: formData.location.region,
           province: formData.location.province,
           city: formData.location.city
         },
-        imagenes: [], // TODO: Handle image upload
-        envio: formData.shipping,
-        // Campos específicos para servicios
-        ...(isServiciosCategory && {
-          experiencia_anos: formData.experienceYears ? parseInt(formData.experienceYears) : undefined,
-          disponibilidad: formData.availability,
-          salario_min: formData.salaryMin ? parseFloat(formData.salaryMin) : undefined,
-          salario_max: formData.salaryMax ? parseFloat(formData.salaryMax) : undefined,
-          tipo_salario: formData.salaryType as 'hora' | 'dia' | 'mes' | 'año' | 'proyecto',
-          especialidades: formData.specialties,
-          certificaciones: formData.certifications,
-          idiomas: formData.languages,
-          disponibilidad_horario: {
-            lunes: formData.schedule.monday,
-            martes: formData.schedule.tuesday,
-            miercoles: formData.schedule.wednesday,
-            jueves: formData.schedule.thursday,
-            viernes: formData.schedule.friday,
-            sabado: formData.schedule.saturday,
-            domingo: formData.schedule.sunday
-          },
-          referencias: formData.references,
-          portfolio: formData.portfolio
-        })
+        imagenes: [],
+        envio: formData.shipping
       };
 
+      // Add product-specific fields only for non-services
+      if (!isServiciosCategory) {
+        Object.assign(baseData, {
+          ...(formData.price && { precio: parseFloat(formData.price) }),
+          ...(formData.rentalPriceDay && { precio_alquiler_dia: parseFloat(formData.rentalPriceDay) }),
+          ...(formData.rentalPriceWeek && { precio_alquiler_semana: parseFloat(formData.rentalPriceWeek) }),
+          ...(formData.rentalPriceMonth && { precio_alquiler_mes: parseFloat(formData.rentalPriceMonth) }),
+          ...(formData.dimensions.width || formData.dimensions.height || formData.dimensions.depth ? {
+            dimensiones: {
+              ...(formData.dimensions.width && { width: formData.dimensions.width }),
+              ...(formData.dimensions.height && { height: formData.dimensions.height }),
+              ...(formData.dimensions.depth && { depth: formData.dimensions.depth })
+            }
+          } : {})
+        });
+      }
+
+      // Add service-specific fields only for services
+      if (isServiciosCategory) {
+        Object.assign(baseData, {
+          ...(formData.experienceYears && { experiencia_anos: parseInt(formData.experienceYears) }),
+          ...(formData.availability && { disponibilidad: formData.availability }),
+          ...(formData.salaryMin && { salario_min: parseFloat(formData.salaryMin) }),
+          ...(formData.salaryMax && { salario_max: parseFloat(formData.salaryMax) }),
+          ...(formData.salaryType && { tipo_salario: formData.salaryType as 'hora' | 'dia' | 'mes' | 'año' | 'proyecto' }),
+          ...(formData.specialties.length > 0 && { especialidades: formData.specialties }),
+          ...(formData.certifications.length > 0 && { certificaciones: formData.certifications }),
+          ...(formData.languages.length > 0 && { idiomas: formData.languages }),
+          ...(Object.values(formData.schedule).some(day => day) && {
+            disponibilidad_horario: Object.fromEntries(
+              Object.entries({
+                lunes: formData.schedule.monday,
+                martes: formData.schedule.tuesday,
+                miercoles: formData.schedule.wednesday,
+                jueves: formData.schedule.thursday,
+                viernes: formData.schedule.friday,
+                sabado: formData.schedule.saturday,
+                domingo: formData.schedule.sunday
+              }).filter(([_, value]) => value) // Solo incluir días con horarios
+            )
+          }),
+          ...(formData.references && { referencias: formData.references }),
+          ...(formData.portfolio && { portfolio: formData.portfolio })
+        });
+      }
+
+      const anuncioData = baseData;
+
       console.log('Datos del anuncio preparados:', anuncioData);
+      console.log('🔍 Enviando a Supabase:', JSON.stringify(anuncioData, null, 2));
 
       // Use the hook to create the anuncio
       const result = await createAnuncio(anuncioData);
@@ -525,12 +562,12 @@ export default function CrearAnuncio() {
                   <Progress 
                     value={progress} 
                     size="md" 
-                    colorScheme="blue" 
+                    colorScheme="orange" 
                     borderRadius="full"
                     bg="gray.200"
                     sx={{
                       '& > div': {
-                        background: 'linear-gradient(90deg, #4299E1 0%, #3182CE 100%)',
+                        background: 'linear-gradient(90deg, #f56500 0%, #ea580c 100%)',
                       }
                     }}
                   />
@@ -553,7 +590,7 @@ export default function CrearAnuncio() {
             bg="white"
             shadow={currentSection >= 1 ? "lg" : "sm"}
             borderWidth={currentSection >= 1 ? "2px" : "1px"}
-            borderColor={currentSection >= 1 ? "blue.200" : "gray.200"}
+            borderColor={currentSection >= 1 ? "orange.200" : "gray.200"}
             transition="all 0.3s"
           >
             <CardBody p={8}>
@@ -566,8 +603,8 @@ export default function CrearAnuncio() {
                   justify="center"
                   fontSize="sm"
                   fontWeight="600"
-                  bg={completedSections.has(1) ? "green.100" : currentSection === 1 ? "blue.100" : "gray.100"}
-                  color={completedSections.has(1) ? "green.700" : currentSection === 1 ? "blue.700" : "gray.500"}
+                  bg={completedSections.has(1) ? "green.100" : currentSection === 1 ? "orange.100" : "gray.100"}
+                  color={completedSections.has(1) ? "green.700" : currentSection === 1 ? "orange.700" : "gray.500"}
                 >
                   {completedSections.has(1) ? <CheckIcon /> : "1"}
                 </Flex>
@@ -591,9 +628,9 @@ export default function CrearAnuncio() {
                         if (option.id !== 'alquiler' && currentSection === 1) goToNextSection();
                       }}
                       borderWidth="2px"
-                      borderColor={formData.type === option.id ? "blue.400" : "gray.200"}
-                      bg={formData.type === option.id ? "blue.50" : "white"}
-                      _hover={{ borderColor: "blue.300", bg: formData.type === option.id ? "blue.50" : "gray.50" }}
+                      borderColor={formData.type === option.id ? "orange.400" : "gray.200"}
+                      bg={formData.type === option.id ? "orange.50" : "white"}
+                      _hover={{ borderColor: "orange.300", bg: formData.type === option.id ? "orange.50" : "gray.50" }}
                       transition="all 0.2s"
                       cursor="pointer"
                       textAlign="center"
@@ -606,7 +643,7 @@ export default function CrearAnuncio() {
                           w={8}
                           h={8}
                           mb={3}
-                          color={formData.type === option.id ? "blue.600" : "gray.400"}
+                          color={formData.type === option.id ? "orange.600" : "gray.400"}
                         />
                         <Text fontWeight="600" fontSize="sm" mb={1}>
                           {option.label}
@@ -700,9 +737,89 @@ export default function CrearAnuncio() {
                 </VStack>
               )}
 
+              {/* Subtipo de servicio */}
+              {formData.type === 'servicio' && (
+                <VStack spacing={4} mt={6}>
+                  <Text fontSize="sm" fontWeight="600" color="gray.700">
+                    ¿Qué tipo de servicio?
+                  </Text>
+                  <Grid templateColumns="repeat(2, 1fr)" gap={4} w="full">
+                    <GridItem>
+                      <Card
+                        as="button"
+                        onClick={() => {
+                          updateFormData('serviceType', 'ofrezco');
+                          if (currentSection === 1) goToNextSection();
+                        }}
+                        borderWidth="2px"
+                        borderColor={formData.serviceType === 'ofrezco' ? "orange.400" : "gray.200"}
+                        bg={formData.serviceType === 'ofrezco' ? "orange.50" : "white"}
+                        _hover={{ borderColor: "orange.300", bg: formData.serviceType === 'ofrezco' ? "orange.50" : "gray.50" }}
+                        transition="all 0.2s"
+                        cursor="pointer"
+                        textAlign="center"
+                        w="full"
+                        h="100px"
+                      >
+                        <CardBody py={4} h="full" display="flex" flexDirection="column" justifyContent="center">
+                          <Icon
+                            as={FiDollarSign}
+                            w={6}
+                            h={6}
+                            mb={2}
+                            color={formData.serviceType === 'ofrezco' ? "orange.600" : "gray.400"}
+                          />
+                          <Text fontWeight="600" fontSize="sm" mb={1}>
+                            Ofrezco servicio
+                          </Text>
+                          <Text fontSize="xs" color="gray.500">
+                            Tengo un servicio profesional para ofrecer
+                          </Text>
+                        </CardBody>
+                      </Card>
+                    </GridItem>
+                    
+                    <GridItem>
+                      <Card
+                        as="button"
+                        onClick={() => {
+                          updateFormData('serviceType', 'busco');
+                          if (currentSection === 1) goToNextSection();
+                        }}
+                        borderWidth="2px"
+                        borderColor={formData.serviceType === 'busco' ? "orange.400" : "gray.200"}
+                        bg={formData.serviceType === 'busco' ? "orange.50" : "white"}
+                        _hover={{ borderColor: "orange.300", bg: formData.serviceType === 'busco' ? "orange.50" : "gray.50" }}
+                        transition="all 0.2s"
+                        cursor="pointer"
+                        textAlign="center"
+                        w="full"
+                        h="100px"
+                      >
+                        <CardBody py={4} h="full" display="flex" flexDirection="column" justifyContent="center">
+                          <Icon
+                            as={FiMapPin}
+                            w={6}
+                            h={6}
+                            mb={2}
+                            color={formData.serviceType === 'busco' ? "orange.600" : "gray.400"}
+                          />
+                          <Text fontWeight="600" fontSize="sm" mb={1}>
+                            Busco servicio
+                          </Text>
+                          <Text fontSize="xs" color="gray.500">
+                            Necesito contratar un servicio profesional
+                          </Text>
+                        </CardBody>
+                      </Card>
+                    </GridItem>
+                  </Grid>
+                </VStack>
+              )}
+
               {completedSections.has(1) && currentSection === 1 && (
                 <Flex justify="end" mt={6}>
-                  <Button colorScheme="blue" onClick={goToNextSection} rightIcon={<Icon as={FiChevronRight} />}>
+                  <Button colorScheme="orange" onClick={goToNextSection} rightIcon={<Icon as={FiChevronRight} />}>
                     Continuar
                   </Button>
                 </Flex>
@@ -716,7 +833,7 @@ export default function CrearAnuncio() {
               bg="white"
               shadow={currentSection >= 2 ? "lg" : "sm"}
               borderWidth={currentSection >= 2 ? "2px" : "1px"}
-              borderColor={currentSection >= 2 ? "blue.200" : "gray.200"}
+              borderColor={currentSection >= 2 ? "orange.200" : "gray.200"}
               transition="all 0.3s"
             >
               <CardBody p={8}>
@@ -729,8 +846,8 @@ export default function CrearAnuncio() {
                     justify="center"
                     fontSize="sm"
                     fontWeight="600"
-                    bg={completedSections.has(2) ? "green.100" : currentSection === 2 ? "blue.100" : "gray.100"}
-                    color={completedSections.has(2) ? "green.700" : currentSection === 2 ? "blue.700" : "gray.500"}
+                    bg={completedSections.has(2) ? "green.100" : currentSection === 2 ? "orange.100" : "gray.100"}
+                    color={completedSections.has(2) ? "green.700" : currentSection === 2 ? "orange.700" : "gray.500"}
                   >
                     {completedSections.has(2) ? <CheckIcon /> : "2"}
                   </Flex>
@@ -751,7 +868,7 @@ export default function CrearAnuncio() {
                         Categoría y subcategoría
                       </FormLabel>
                       <Select value={formData.subcategory} onValueChange={(value) => updateFormData('subcategory', value)}>
-                        <SelectTrigger className="h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-blue-400">
+                        <SelectTrigger className="h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-orange-400">
                           <SelectValue placeholder="Selecciona una subcategoría" />
                         </SelectTrigger>
                         <SelectContent>
@@ -775,7 +892,7 @@ export default function CrearAnuncio() {
                       bg="white"
                       borderColor="gray.300"
                       _hover={{ borderColor: "gray.400" }}
-                      _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                      _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                     />
                     <Text fontSize="xs" color="gray.500" textAlign="right" mt={1}>
                       {formData.title.length}/80
@@ -797,7 +914,7 @@ export default function CrearAnuncio() {
                       bg="white"
                       borderColor="gray.300"
                       _hover={{ borderColor: "gray.400" }}
-                      _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                      _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                     />
                     <Text fontSize="xs" color="gray.500" textAlign="right" mt={1}>
                       {formData.description.length}/500
@@ -807,7 +924,7 @@ export default function CrearAnuncio() {
 
                   {completedSections.has(2) && currentSection === 2 && (
                     <Flex justify="end" mt={6}>
-                      <Button colorScheme="blue" onClick={goToNextSection} rightIcon={<Icon as={FiChevronRight} />}>
+                      <Button colorScheme="orange" onClick={goToNextSection} rightIcon={<Icon as={FiChevronRight} />}>
                         Continuar
                       </Button>
                     </Flex>
@@ -822,7 +939,7 @@ export default function CrearAnuncio() {
               bg="white"
               shadow={currentSection >= 3 ? "lg" : "sm"}
               borderWidth={currentSection >= 3 ? "2px" : "1px"}
-              borderColor={currentSection >= 3 ? "blue.200" : "gray.200"}
+              borderColor={currentSection >= 3 ? "orange.200" : "gray.200"}
               transition="all 0.3s"
             >
               <CardBody p={8}>
@@ -835,8 +952,8 @@ export default function CrearAnuncio() {
                     justify="center"
                     fontSize="sm"
                     fontWeight="600"
-                    bg={completedSections.has(3) ? "green.100" : currentSection === 3 ? "blue.100" : "gray.100"}
-                    color={completedSections.has(3) ? "green.700" : currentSection === 3 ? "blue.700" : "gray.500"}
+                    bg={completedSections.has(3) ? "green.100" : currentSection === 3 ? "orange.100" : "gray.100"}
+                    color={completedSections.has(3) ? "green.700" : currentSection === 3 ? "orange.700" : "gray.500"}
                   >
                     {completedSections.has(3) ? <CheckIcon /> : "3"}
                   </Flex>
@@ -870,7 +987,7 @@ export default function CrearAnuncio() {
                             bg="white"
                             borderColor="gray.300"
                             _hover={{ borderColor: "gray.400" }}
-                            _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                            _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                           />
                         </NumberInput>
                       </FormControl>
@@ -881,7 +998,7 @@ export default function CrearAnuncio() {
                           Disponibilidad
                         </FormLabel>
                         <Select value={formData.availability} onValueChange={(value) => updateFormData('availability', value)}>
-                          <SelectTrigger className="h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-blue-400">
+                          <SelectTrigger className="h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-orange-400">
                             <SelectValue placeholder="Selecciona tu disponibilidad" />
                           </SelectTrigger>
                           <SelectContent>
@@ -907,7 +1024,7 @@ export default function CrearAnuncio() {
                                 bg="white"
                                 borderColor="gray.300"
                                 _hover={{ borderColor: "gray.400" }}
-                                _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                                _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                               />
                             </NumberInput>
                             <Text color="gray.500">-</Text>
@@ -919,12 +1036,12 @@ export default function CrearAnuncio() {
                                 bg="white"
                                 borderColor="gray.300"
                                 _hover={{ borderColor: "gray.400" }}
-                                _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                                _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                               />
                             </NumberInput>
                           </HStack>
                           <Select value={formData.salaryType} onValueChange={(value) => updateFormData('salaryType', value)}>
-                            <SelectTrigger className="h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-blue-400">
+                            <SelectTrigger className="h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-orange-400">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -943,7 +1060,7 @@ export default function CrearAnuncio() {
                         Estado
                       </FormLabel>
                       <Select value={formData.state} onValueChange={(value) => updateFormData('state', value)}>
-                        <SelectTrigger className="h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-blue-400">
+                        <SelectTrigger className="h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-orange-400">
                           <SelectValue placeholder="Selecciona el estado" />
                         </SelectTrigger>
                         <SelectContent>
@@ -970,7 +1087,7 @@ export default function CrearAnuncio() {
                             bg="white"
                             borderColor="gray.300"
                             _hover={{ borderColor: "gray.400" }}
-                            _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                            _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                           />
                         </NumberInput>
                       </GridItem>
@@ -983,7 +1100,7 @@ export default function CrearAnuncio() {
                             bg="white"
                             borderColor="gray.300"
                             _hover={{ borderColor: "gray.400" }}
-                            _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                            _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                           />
                         </NumberInput>
                       </GridItem>
@@ -996,7 +1113,7 @@ export default function CrearAnuncio() {
                             bg="white"
                             borderColor="gray.300"
                             _hover={{ borderColor: "gray.400" }}
-                            _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                            _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                           />
                         </NumberInput>
                       </GridItem>
@@ -1004,7 +1121,7 @@ export default function CrearAnuncio() {
                   </FormControl>
 
                   {/* Precio de venta/compra */}
-                  {(formData.type === 'vendo' || formData.type === 'oferta') && (
+                  {(formData.type === 'vendo' || (formData.type === 'servicio' && formData.serviceType === 'ofrezco')) && (
                     <FormControl isRequired>
                       <FormLabel fontSize="sm" fontWeight="600" color="gray.700">
                         {formData.type === 'vendo' ? 'Precio de venta' : 'Precio por hora'}
@@ -1018,11 +1135,11 @@ export default function CrearAnuncio() {
                             bg="white"
                             borderColor="gray.300"
                             _hover={{ borderColor: "gray.400" }}
-                            _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                            _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                           />
                         </NumberInput>
                           <Select value={formData.currency} onValueChange={(value) => updateFormData('currency', value)}>
-                            <SelectTrigger className="w-20 h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-blue-400">
+                            <SelectTrigger className="w-20 h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-orange-400">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1054,7 +1171,7 @@ export default function CrearAnuncio() {
                               bg="white"
                               borderColor="gray.300"
                               _hover={{ borderColor: "gray.400" }}
-                              _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                              _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                             />
                           </NumberInput>
                           <Text fontSize="sm" color="gray.500">€/día</Text>
@@ -1070,7 +1187,7 @@ export default function CrearAnuncio() {
                               bg="white"
                               borderColor="gray.300"
                               _hover={{ borderColor: "gray.400" }}
-                              _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                              _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                             />
                           </NumberInput>
                           <Text fontSize="sm" color="gray.500">€/semana</Text>
@@ -1086,7 +1203,7 @@ export default function CrearAnuncio() {
                               bg="white"
                               borderColor="gray.300"
                               _hover={{ borderColor: "gray.400" }}
-                              _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                              _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                             />
                           </NumberInput>
                           <Text fontSize="sm" color="gray.500">€/mes</Text>
@@ -1113,7 +1230,7 @@ export default function CrearAnuncio() {
                             bg="white"
                             borderColor="gray.300"
                             _hover={{ borderColor: "gray.400" }}
-                            _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                            _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                           />
                         </NumberInput>
                         <Text fontSize="sm" color="gray.500">€/mes</Text>
@@ -1127,7 +1244,7 @@ export default function CrearAnuncio() {
 
                 {completedSections.has(3) && currentSection === 3 && (
                   <Flex justify="end" mt={6}>
-                    <Button colorScheme="blue" onClick={goToNextSection} rightIcon={<Icon as={FiChevronRight} />}>
+                    <Button colorScheme="orange" onClick={goToNextSection} rightIcon={<Icon as={FiChevronRight} />}>
                       Continuar
                     </Button>
                   </Flex>
@@ -1155,8 +1272,8 @@ export default function CrearAnuncio() {
                     justify="center"
                     fontSize="sm"
                     fontWeight="600"
-                    bg={completedSections.has(4) ? "green.100" : currentSection === 4 ? "blue.100" : "gray.100"}
-                    color={completedSections.has(4) ? "green.700" : currentSection === 4 ? "blue.700" : "gray.500"}
+                    bg={completedSections.has(4) ? "green.100" : currentSection === 4 ? "orange.100" : "gray.100"}
+                    color={completedSections.has(4) ? "green.700" : currentSection === 4 ? "orange.700" : "gray.500"}
                   >
                     {completedSections.has(4) ? <CheckIcon /> : "4"}
                   </Flex>
@@ -1177,13 +1294,13 @@ export default function CrearAnuncio() {
                       <Box
                         borderWidth="2px"
                         borderStyle="dashed"
-                        borderColor="blue.300"
+                        borderColor="orange.300"
                         borderRadius="lg"
                         p={8}
                         textAlign="center"
-                        bg="blue.50"
+                        bg="orange.50"
                         cursor="pointer"
-                        _hover={{ bg: "blue.100", borderColor: "blue.400" }}
+                        _hover={{ bg: "orange.100", borderColor: "orange.400" }}
                         transition="all 0.2s"
                         position="relative"
                       >
@@ -1202,14 +1319,14 @@ export default function CrearAnuncio() {
                             cursor: 'pointer'
                           }}
                         />
-                        <Icon as={FiCamera} w={12} h={12} color="blue.500" mb={4} />
-                        <Heading size="sm" color="blue.700" mb={2}>
+                        <Icon as={FiCamera} w={12} h={12} color="orange.500" mb={4} />
+                        <Heading size="sm" color="orange.700" mb={2}>
                           Arrastra tus fotos aquí
                         </Heading>
-                        <Text fontSize="sm" color="blue.600" mb={2}>
+                        <Text fontSize="sm" color="orange.600" mb={2}>
                           Formatos aceptados: JPEG, PNG y WebP. Tamaño límite: 10 MB por archivo.
                         </Text>
-                        <Text fontSize="xs" color="blue.500">
+                        <Text fontSize="xs" color="orange.500">
                           Máximo 6 imágenes
                         </Text>
                       </Box>
@@ -1249,7 +1366,7 @@ export default function CrearAnuncio() {
                                     position="absolute"
                                     bottom="2"
                                     left="2"
-                                    colorScheme="blue"
+                                    colorScheme="orange"
                                     fontSize="xs"
                                   >
                                     Principal
@@ -1283,7 +1400,7 @@ export default function CrearAnuncio() {
 
                 {completedSections.has(4) && currentSection === 4 && (
                   <Flex justify="end" mt={6}>
-                    <Button colorScheme="blue" onClick={goToNextSection} rightIcon={<Icon as={FiChevronRight} />}>
+                    <Button colorScheme="orange" onClick={goToNextSection} rightIcon={<Icon as={FiChevronRight} />}>
                       Continuar
                     </Button>
                   </Flex>
@@ -1311,8 +1428,8 @@ export default function CrearAnuncio() {
                     justify="center"
                     fontSize="sm"
                     fontWeight="600"
-                    bg={completedSections.has(5) ? "green.100" : currentSection === 5 ? "blue.100" : "gray.100"}
-                    color={completedSections.has(5) ? "green.700" : currentSection === 5 ? "blue.700" : "gray.500"}
+                    bg={completedSections.has(5) ? "green.100" : currentSection === 5 ? "orange.100" : "gray.100"}
+                    color={completedSections.has(5) ? "green.700" : currentSection === 5 ? "orange.700" : "gray.500"}
                   >
                     {completedSections.has(5) ? <CheckIcon /> : "5"}
                   </Flex>
@@ -1333,7 +1450,7 @@ export default function CrearAnuncio() {
                       Comunidad Autónoma
                     </FormLabel>
                     <Select value={formData.location.region} onValueChange={(value) => updateNestedFormData('location', 'region', value)}>
-                      <SelectTrigger className="h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-blue-400">
+                      <SelectTrigger className="h-10 bg-white border-gray-300 hover:border-gray-400 focus:border-orange-400">
                         <SelectValue placeholder="Selecciona tu comunidad" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1356,7 +1473,7 @@ export default function CrearAnuncio() {
                       bg="white"
                       borderColor="gray.300"
                       _hover={{ borderColor: "gray.400" }}
-                      _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                      _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                     />
                   </FormControl>
 
@@ -1372,7 +1489,7 @@ export default function CrearAnuncio() {
                       bg="white"
                       borderColor="gray.300"
                       _hover={{ borderColor: "gray.400" }}
-                      _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                      _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                     />
                   </FormControl>
 
@@ -1394,15 +1511,15 @@ export default function CrearAnuncio() {
                   </FormControl>
 
                   {formData.shipping && (
-                    <Box p={4} bg="blue.50" borderRadius="md" borderWidth="1px" borderColor="blue.200">
-                      <Text fontSize="sm" color="blue.700" fontWeight="600" mb={2}>
+                    <Box p={4} bg="orange.50" borderRadius="md" borderWidth="1px" borderColor="orange.200">
+                      <Text fontSize="sm" color="orange.700" fontWeight="600" mb={2}>
                         ¿Qué tamaño debería elegir?
                       </Text>
                       <VStack align="start" spacing={1}>
-                        <Text fontSize="xs" color="blue.600">
+                        <Text fontSize="xs" color="orange.600">
                           📦 <strong>Estándar:</strong> productos pequeños y medianos.
                         </Text>
-                        <Text fontSize="xs" color="blue.600">
+                        <Text fontSize="xs" color="orange.600">
                           🚛 <strong>Grande:</strong> muebles y electrodomésticos grandes.
                         </Text>
                       </VStack>
@@ -1440,8 +1557,8 @@ export default function CrearAnuncio() {
                     justify="center"
                     fontSize="sm"
                     fontWeight="600"
-                    bg={completedSections.has(6) ? "green.100" : currentSection === 6 ? "blue.100" : "gray.100"}
-                    color={completedSections.has(6) ? "green.700" : currentSection === 6 ? "blue.700" : "gray.500"}
+                    bg={completedSections.has(6) ? "green.100" : currentSection === 6 ? "orange.100" : "gray.100"}
+                    color={completedSections.has(6) ? "green.700" : currentSection === 6 ? "orange.700" : "gray.500"}
                   >
                     {completedSections.has(6) ? <CheckIcon /> : "6"}
                   </Flex>
@@ -1469,7 +1586,7 @@ export default function CrearAnuncio() {
                           bg="white"
                           borderColor="gray.300"
                           _hover={{ borderColor: "gray.400" }}
-                          _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                          _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               const input = e.target as HTMLInputElement;
@@ -1482,7 +1599,7 @@ export default function CrearAnuncio() {
                         />
                         <Button
                           size="sm"
-                          colorScheme="blue"
+                          colorScheme="orange"
                           onClick={() => {
                             const input = document.getElementById('specialty-input') as HTMLInputElement;
                             if (input.value.trim()) {
@@ -1503,7 +1620,7 @@ export default function CrearAnuncio() {
                             key={specialty}
                             variant="outline"
                             cursor="pointer"
-                            _hover={{ bg: "blue.50" }}
+                            _hover={{ bg: "orange.50" }}
                             onClick={() => addToArray('specialties', specialty)}
                           >
                             + {specialty}
@@ -1519,7 +1636,7 @@ export default function CrearAnuncio() {
                             {formData.specialties.map((specialty) => (
                               <Badge
                                 key={specialty}
-                                colorScheme="blue"
+                                colorScheme="orange"
                                 cursor="pointer"
                                 onClick={() => removeFromArray('specialties', specialty)}
                               >
@@ -1545,7 +1662,7 @@ export default function CrearAnuncio() {
                           bg="white"
                           borderColor="gray.300"
                           _hover={{ borderColor: "gray.400" }}
-                          _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                          _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               const input = e.target as HTMLInputElement;
@@ -1605,7 +1722,7 @@ export default function CrearAnuncio() {
                             key={language}
                             variant="outline"
                             cursor="pointer"
-                            _hover={{ bg: "green.50" }}
+                            _hover={{ bg: "orange.50" }}
                             onClick={() => addToArray('languages', language)}
                           >
                             + {language}
@@ -1637,7 +1754,7 @@ export default function CrearAnuncio() {
 
                 {completedSections.has(6) && currentSection === 6 && (
                   <Flex justify="end" mt={6}>
-                    <Button colorScheme="blue" onClick={goToNextSection} rightIcon={<Icon as={FiChevronRight} />}>
+                    <Button colorScheme="orange" onClick={goToNextSection} rightIcon={<Icon as={FiChevronRight} />}>
                       Continuar
                     </Button>
                     </Flex>
@@ -1665,8 +1782,8 @@ export default function CrearAnuncio() {
                     justify="center"
                     fontSize="sm"
                     fontWeight="600"
-                    bg={completedSections.has(7) ? "green.100" : currentSection === 7 ? "blue.100" : "gray.100"}
-                    color={completedSections.has(7) ? "green.700" : currentSection === 7 ? "blue.700" : "gray.500"}
+                    bg={completedSections.has(7) ? "green.100" : currentSection === 7 ? "orange.100" : "gray.100"}
+                    color={completedSections.has(7) ? "green.700" : currentSection === 7 ? "orange.700" : "gray.500"}
                   >
                     {completedSections.has(7) ? <CheckIcon /> : "7"}
                   </Flex>
@@ -1709,7 +1826,7 @@ export default function CrearAnuncio() {
                             bg="white"
                             borderColor="gray.300"
                             _hover={{ borderColor: "gray.400" }}
-                            _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                            _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                           />
                         </HStack>
                       ))}
@@ -1730,7 +1847,7 @@ export default function CrearAnuncio() {
                       bg="white"
                       borderColor="gray.300"
                       _hover={{ borderColor: "gray.400" }}
-                      _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                      _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                     />
                     <Text fontSize="xs" color="gray.500" mt={1}>
                       Opcional: Ayuda a mostrar la calidad de tu trabajo
@@ -1751,7 +1868,7 @@ export default function CrearAnuncio() {
                       bg="white"
                       borderColor="gray.300"
                       _hover={{ borderColor: "gray.400" }}
-                      _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px #3182ce" }}
+                      _focus={{ borderColor: "orange.400", boxShadow: "0 0 0 1px #f56500" }}
                     />
                     <Text fontSize="xs" color="gray.500" mt={1}>
                       Esta información ayudará a los empleadores a conocerte mejor
@@ -1791,6 +1908,11 @@ export default function CrearAnuncio() {
                 {completedSections.size > 0 && (
                   <>Has completado {completedSections.size} de {totalSections} secciones</>
                 )}
+                {/* Debug info */}
+                <br />
+                <Text fontSize="xs" color="red.500">
+                  Debug: {completedSections.size}/{totalSections} - {Array.from(completedSections).join(', ')}
+                </Text>
               </Text>
               <HStack spacing={3}>
                 <Button 
@@ -1801,18 +1923,18 @@ export default function CrearAnuncio() {
                 >
                   Cancelar
                 </Button>
-                {completedSections.size === totalSections && (
-                  <Button 
-                    colorScheme="blue" 
-                    onClick={handlePublish} 
-                    fontWeight="600"
-                    size="md"
-                    bg="blue.500"
-                    _hover={{ bg: "blue.600" }}
-                  >
-                    Publicar anuncio
-                  </Button>
-                )}
+                {/* Debug: Always show button */}
+                <Button 
+                  colorScheme="orange" 
+                  onClick={handlePublish} 
+                  fontWeight="600"
+                  size="md"
+                  bg="orange.500"
+                  _hover={{ bg: "orange.600" }}
+                  isDisabled={completedSections.size !== totalSections}
+                >
+                  Publicar anuncio {completedSections.size !== totalSections && '(Incompleto)'}
+                </Button>
               </HStack>
             </Flex>
           </Container>

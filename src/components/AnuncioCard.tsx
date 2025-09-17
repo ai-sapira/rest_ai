@@ -28,9 +28,47 @@ export function AnuncioCard({
 
   const handleContactClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // TODO: Implement contact functionality
-    console.log('Contact clicked for anuncio:', anuncio.id);
+    // Navigate to messages with the anuncio owner
+    navigate('/platform/mensajes', {
+      state: {
+        chatType: 'contact',
+        anuncioId: anuncio.id,
+        ownerId: anuncio.user_id,
+        anuncioTitle: anuncio.titulo
+      }
+    });
   };
+
+  // Helper function to get price display
+  const getPriceDisplay = (anuncio: Anuncio) => {
+    if (anuncio.tipo === 'alquilo') {
+      const prices = [];
+      if (anuncio.precio_alquiler_dia) prices.push(`€${anuncio.precio_alquiler_dia}/día`);
+      if (anuncio.precio_alquiler_semana) prices.push(`€${anuncio.precio_alquiler_semana}/sem`);
+      if (anuncio.precio_alquiler_mes) prices.push(`€${anuncio.precio_alquiler_mes}/mes`);
+      
+      if (prices.length > 0) {
+        return prices[0]; // Show the first available price
+      }
+    } else if (anuncio.tipo === 'busco_alquiler') {
+      if (anuncio.precio_alquiler_mes) {
+        return `Hasta €${anuncio.precio_alquiler_mes}/mes`;
+      }
+    } else if (anuncio.precio) {
+      return `€${anuncio.precio}`;
+    }
+    
+    // Fallback text based on type
+    switch (anuncio.tipo) {
+      case 'busco':
+      case 'busco_servicio':
+        return 'Consultar';
+      default:
+        return 'Precio a consultar';
+    }
+  };
+
+  const hasPrice = anuncio.precio || anuncio.precio_alquiler_dia || anuncio.precio_alquiler_semana || anuncio.precio_alquiler_mes;
 
   return (
     <Card 
@@ -61,7 +99,7 @@ export function AnuncioCard({
         {/* Type and Features - Top Left - Clean */}
         <div className="absolute top-3 left-3 flex items-center gap-2">
           <Badge className="bg-repsol-blue text-white border-0 shadow-lg">
-            {getTypeLabel(anuncio.actor_type === 'provider' ? 'oferta' : 'vendo')}
+            {getTypeLabel(anuncio.actor_type === 'provider' ? 'oferta' : anuncio.tipo)}
           </Badge>
           {anuncio.envio && (
             <Badge className="bg-repsol-orange text-white border-0 shadow-lg">
@@ -134,16 +172,14 @@ export function AnuncioCard({
 
         {/* Price and Contact Button */}
         <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-100">
-          {anuncio.precio && (
-            <div className="flex items-center">
-              <span className="text-2xl font-bold text-repsol-blue">
-                {anuncio.precio}€
-              </span>
-            </div>
-          )}
+          <div className="flex items-center">
+            <span className={`${hasPrice ? 'text-2xl font-bold text-repsol-blue' : 'text-lg font-semibold text-gray-600'}`}>
+              {getPriceDisplay(anuncio)}
+            </span>
+          </div>
           <Button 
             size="sm" 
-            className={`${anuncio.precio ? 'flex-shrink-0' : 'w-full'} bg-repsol-blue hover:bg-repsol-orange text-white transition-all duration-300 shadow-md hover:shadow-lg`}
+            className="flex-shrink-0 bg-repsol-blue hover:bg-repsol-orange text-white transition-all duration-300 shadow-md hover:shadow-lg"
             onClick={handleContactClick}
           >
             <MessageCircle className="h-4 w-4 mr-2" />
