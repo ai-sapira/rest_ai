@@ -1,90 +1,139 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { communitiesService, type Community } from '@/services/communities.service';
 
-export interface CommunityRow {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  hashtag: string | null;
-  is_public: boolean;
-  avatar_url: string | null;
-  member_count: number;
-}
-
+// Hook for managing communities
 export function useCommunities() {
-  const [allCommunities, setAllCommunities] = useState<CommunityRow[]>([]);
-  const [myCommunities, setMyCommunities] = useState<CommunityRow[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { user, loading: authLoading } = useAuth();
+  const [userCommunities, setUserCommunities] = useState<Community[]>([]);
+  const [allCommunities, setAllCommunities] = useState<Community[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAll = async (manageLoading: boolean = true) => {
-    try {
-      if (manageLoading) setLoading(true);
-      const { data, error } = await supabase
-        .from("communities")
-        .select("id, slug, name, description, hashtag, is_public, avatar_url, member_count")
-        .range(0, 49)
-        .order("member_count", { ascending: false });
+  // 🔍 DEEP DEBUG: Track all state changes
+  console.log('🔍 useCommunities STATE:', {
+    authLoading,
+    userExists: !!user,
+    userId: user?.id,
+    userCommunitiesCount: userCommunities.length,
+    allCommunitiesCount: allCommunities.length,
+    loading,
+    error
+  });
 
-      if (error) throw error;
-      
-      // Deduplicate by id just in case
-      const uniqueCommunities = (data || []).filter((community, index, self) => 
-        community && self.findIndex(c => c?.id === community.id) === index
-      ) as CommunityRow[];
-      
-      setAllCommunities(uniqueCommunities);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      if (manageLoading) setLoading(false);
+  // Fetch user's communities
+  const fetchUserCommunities = async () => {
+    console.log('🔍 fetchUserCommunities CALLED - user:', !!user, user?.id);
+    
+    if (!user) {
+      console.log('🔍 fetchUserCommunities: No user, setting empty array');
+      setUserCommunities([]);
+      return;
+    }
+
+    try {
+      console.log('🔍 fetchUserCommunities: Calling service for user:', user.id);
+      const communities = await communitiesService.getUserCommunities(user.id);
+      console.log('🔍 fetchUserCommunities: Got', communities.length, 'communities');
+      setUserCommunities(communities);
+    } catch (err: any) {
+      console.error('🔍 fetchUserCommunities ERROR:', err);
+      setError(err.message);
     }
   };
 
-  const fetchMine = async (manageLoading: boolean = true) => {
+  // Fetch all communities
+  const fetchAllCommunities = async () => {
     try {
-      if (manageLoading) setLoading(true);
-      
-      // Get current user first
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) {
-        setMyCommunities([]);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("community_members")
-        .select("communities(id, slug, name, description, hashtag, is_public, avatar_url, member_count)")
-        .eq('user_id', userData.user.id);
-
-      if (error) throw error;
-      
-      // Map and deduplicate by community id
-      const mapped = (data || []).map((row: any) => row.communities) as CommunityRow[];
-      const uniqueCommunities = mapped.filter((community, index, self) => 
-        community && self.findIndex(c => c?.id === community.id) === index
-      );
-      
-      setMyCommunities(uniqueCommunities);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      if (manageLoading) setLoading(false);
+      const communities = await communitiesService.getAllCommunities();
+      setAllCommunities(communities);
+    } catch (err: any) {
+      console.error('Error fetching all communities:', err);
+      setError(err.message);
     }
   };
 
-  useEffect(() => {
-    // Fetch in parallel but manage loading only once
+  // Refresh both lists
+  const refresh = async () => {
+    console.log('🔍 refresh CALLED - authLoading:', authLoading, 'user:', !!user);
+    
+    if (authLoading) {
+      console.log('🔍 refresh: Auth still loading, skipping');
+      return;
+    }
+    
     setLoading(true);
-    Promise.all([
-      fetchAll(false),
-      fetchMine(false)
-    ])
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    setError(null);
+    
+    try {
+      console.log('🔍 refresh: Starting fetch...');
+      await Promise.all([
+        fetchUserCommunities(),
+        fetchAllCommunities(),
+      ]);
+      console.log('🔍 refresh: Fetch completed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  return { allCommunities, myCommunities, loading, error, refetchAll: fetchAll, refetchMine: fetchMine };
+  // Join a community
+  const joinCommunity = async (communityId: string) => {
+    if (!user) return false;
+    
+    const success = await communitiesService.joinCommunity(user.id, communityId);
+    if (success) {
+      await refresh(); // Refresh lists after joining
+    }
+    return success;
+  };
+
+  // Leave a community
+  const leaveCommunity = async (communityId: string) => {
+    if (!user) return false;
+    
+    const success = await communitiesService.leaveCommunity(user.id, communityId);
+    if (success) {
+      await refresh(); // Refresh lists after leaving
+    }
+    return success;
+  };
+
+  // Initial fetch when auth is ready
+  useEffect(() => {
+    console.log('🔍 useEffect [authLoading, user?.id] TRIGGERED:', { authLoading, userId: user?.id });
+    if (!authLoading) {
+      console.log('🔄 useCommunities: Auth ready, triggering refresh');
+      refresh();
+    } else {
+      console.log('🔄 useCommunities: Auth still loading, waiting...');
+    }
+  }, [authLoading, user?.id]);
+
+  // ✅ DEMO MODE: Super aggressive refresh for demo
+  useEffect(() => {
+    console.log('🔍 useEffect [] MOUNT TRIGGERED - DEMO MODE');
+    console.log('🔄 useCommunities: DEMO MODE - Immediate refresh on mount');
+    // Double refresh for demo reliability
+    refresh();
+    setTimeout(() => {
+      console.log('🔄 useCommunities: DEMO MODE - Secondary refresh (100ms)');
+      refresh();
+    }, 100); // Secondary refresh after 100ms
+  }, []); // Run once on mount
+
+  return {
+    // Data
+    userCommunities,     // Communities the user follows
+    allCommunities,      // All public communities
+    
+    // State
+    loading,
+    error,
+    
+    // Actions
+    refresh,
+    joinCommunity,
+    leaveCommunity,
+  };
 }
-

@@ -80,6 +80,8 @@ interface CreatePostData {
 export function usePostsSimple(filters: UsePostsFilters = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  
+  // ✅ CRITICAL: Removed circular dependency - fetch user communities directly here when needed
 
   // ✅ INFINITE QUERY for pagination (replaces complex pagination logic)
   const {
@@ -100,19 +102,18 @@ export function usePostsSimple(filters: UsePostsFilters = {}) {
       onlyUserCommunities: filters.onlyUserCommunities || false,
     }],
     queryFn: async ({ pageParam }) => {
-      console.log('🚀 usePostsSimple: Query function called with:', { pageParam, filters, user: !!user });
+      // ✅ OPTIMIZED: Removed excessive logging
       const limit = filters.limit || 20;
       
-      // ✅ Get user's communities first (if user is logged in)
+      // ✅ CRITICAL: Get user communities directly (avoid circular dependency)
       let userCommunityIds: string[] = [];
-      if (user) {
+      if (user && filters.onlyUserCommunities) {
         const { data: userCommunities } = await supabase
           .from('community_members')
           .select('community_id')
           .eq('user_id', user.id);
         
         userCommunityIds = userCommunities?.map(c => c.community_id) || [];
-        console.log('🔍 usePostsSimple: User communities:', userCommunityIds);
       }
 
       // ✅ Build main query - simple and reliable (no joins)
@@ -142,22 +143,18 @@ export function usePostsSimple(filters: UsePostsFilters = {}) {
         .limit(limit);
 
       // ✅ Apply filters
-      console.log('🔍 usePostsSimple: Applying filters:', { 
-        filters, 
-        userCommunityIds: userCommunityIds.length,
-        willFilterByCommunity: !!filters.communityId || (filters.onlyUserCommunities && user && userCommunityIds.length > 0)
-      });
+      // ✅ OPTIMIZED: Removed logging
       
       if (filters.communityId) {
         // Specific community filter
         query = query.eq('community_id', filters.communityId);
-        console.log('🔍 Applied community filter:', filters.communityId);
+        // ✅ OPTIMIZED: Removed logging
       } else if (filters.onlyUserCommunities && user && userCommunityIds.length > 0) {
         // Only for "Mi Red" tab - show posts from user's communities
         query = query.in('community_id', userCommunityIds);
-        console.log('🔍 Applied user communities filter:', userCommunityIds);
+        // ✅ OPTIMIZED: Removed logging
       } else {
-        console.log('🔍 No community filter applied - showing ALL public posts');
+        // ✅ OPTIMIZED: Removed logging
       }
       // For "recientes" and "popular" tabs, show ALL public posts (no community filter)
 
@@ -194,12 +191,12 @@ export function usePostsSimple(filters: UsePostsFilters = {}) {
         }
         
         if (!postsData || postsData.length === 0) {
-          console.log('✅ usePostsSimple: No posts found for current filters');
+          // ✅ OPTIMIZED: Removed logging
           return { posts: [], nextCursor: null };
         }
 
         posts = postsData; // ✅ Assign to outer scope variable
-        console.log('✅ usePostsSimple: Posts fetched successfully:', posts.length);
+        // ✅ OPTIMIZED: Removed logging
       } catch (error: any) {
         clearTimeout(timeoutId);
         
@@ -242,7 +239,7 @@ export function usePostsSimple(filters: UsePostsFilters = {}) {
         user_reaction: [], // Will be loaded separately for performance
       }));
 
-      console.log('✅ usePostsSimple: Processed posts:', processedPosts.length, 'posts ready');
+      // ✅ OPTIMIZED: Removed logging
 
       // ✅ Load user reactions separately if needed (non-blocking)
       if (user) {
@@ -274,16 +271,18 @@ export function usePostsSimple(filters: UsePostsFilters = {}) {
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: true, // Always enabled, but conditional logic inside
-    staleTime: 2 * 60 * 1000, // 2 minutes - posts change frequently
+    staleTime: 0, // ✅ CRITICAL: NO CACHE - Always fetch fresh 
+    gcTime: 0, // ✅ CRITICAL: NO CACHE - Immediate cleanup
     retry: (failureCount, error) => {
       console.error(`❌ usePostsSimple: Query failed (attempt ${failureCount}):`, error);
-      return failureCount < 3;
+      return failureCount < 2; // ✅ CRITICAL: Reduced retries to fail faster
     },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000), // ✅ CRITICAL: Exponential backoff with max 3s
     onError: (error) => {
       console.error('❌ usePostsSimple: Query error:', error);
     },
     onSuccess: (data) => {
-      console.log('✅ usePostsSimple: Query successful, pages:', data?.pages?.length);
+      // ✅ OPTIMIZED: Removed logging
     }
   });
 
@@ -292,17 +291,11 @@ export function usePostsSimple(filters: UsePostsFilters = {}) {
   const hasMore = hasNextPage;
   const loading = isLoading;
   
-  // ✅ DEBUG: Enhanced logging for troubleshooting
-  console.log('🔍 usePostsSimple: Hook state:', {
-    dataPages: data?.pages?.length || 0,
-    totalPosts: posts.length,
-    loading,
-    error: error?.message,
-    hasMore,
-    filters,
-    pagesData: data?.pages?.map(page => ({ postsInPage: page.posts.length })) || [],
-    firstPostId: posts[0]?.id
-  });
+  // ✅ OPTIMIZED: Removed excessive logging that impacts performance
+  // Only log on errors or in development
+  if (error && process.env.NODE_ENV === 'development') {
+    console.error('🔍 usePostsSimple error:', error.message);
+  }
 
   // ============================================================================
   // MUTATIONS - CREATE POST AND TOGGLE LIKE
@@ -492,7 +485,7 @@ export function usePost(postId: string) {
         throw new Error('Invalid post ID provided');
       }
 
-      console.log('🔍 usePost: Fetching post with ID:', postId);
+      // ✅ OPTIMIZED: Removed logging
 
       // ✅ STEP 1: Get main post data with error handling
       const { data: post, error: postError } = await supabase
@@ -530,7 +523,7 @@ export function usePost(postId: string) {
         throw new Error('Post not found');
       }
 
-      console.log('✅ usePost: Post fetched successfully:', post.id);
+      // ✅ OPTIMIZED: Removed logging
 
       // ✅ STEP 2: Get related data in parallel with robust error handling
       const promises = [];
@@ -604,7 +597,7 @@ export function usePost(postId: string) {
       // Execute all queries in parallel
       const results = await Promise.all(promises);
 
-      console.log('✅ usePost: Related data fetched:', results.length, 'queries');
+      // ✅ OPTIMIZED: Removed logging
 
       // ✅ STEP 3: Process results with error tolerance
       let profileData = null;
@@ -662,7 +655,7 @@ export function usePost(postId: string) {
         shares_count: post.shares_count || 0,
       };
 
-      console.log('✅ usePost: Enriched post ready:', enrichedPost.id);
+      // ✅ OPTIMIZED: Removed logging
       return enrichedPost;
     },
     enabled: !!postId && postId.trim() !== '',

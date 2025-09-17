@@ -5,13 +5,14 @@ import { pageTransitionVariants } from "@/hooks/useNavigationTransition";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PlatformNavbar } from "@/components/PlatformNavbar";
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 import Login from "./Login";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Community from "./Community";
 import Profile from "./Profile";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import MiRed from "./MiRed";
 import MisThreads from "./MisThreads";
 import Categorias from "./Categorias";
@@ -37,7 +38,7 @@ import Explorar from "./Explorar";
 import ProviderProfile from "./ProviderProfile";
 import CommunityDetail from "./CommunityDetail";
 import { CreateCommunityForm } from "@/components/CreateCommunityForm";
-import { useCommunitiesSimple } from "@/hooks/useCommunitiesSimple";
+import { useCommunities } from "@/hooks/useCommunities";
 
 import { 
   TrendingUp, 
@@ -279,7 +280,7 @@ export default function Platform() {
   const [isCreateCommunityModalOpen, setIsCreateCommunityModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("recientes");
   const { user, loading } = useAuth();
-  const { refetchAll, refetchMine } = useCommunitiesSimple();
+  const { refresh } = useCommunities();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -305,8 +306,7 @@ export default function Platform() {
 
   const handleCommunityCreated = () => {
     // Refresh communities data after creating a new one
-    refetchAll();
-    refetchMine();
+    refresh();
   };
 
   // Reset activeTab to "recientes" when navigating to /comunidad from sidebar
@@ -355,18 +355,20 @@ export default function Platform() {
       <div className="flex flex-1">
         <AppSidebar onCreateCommunity={handleCreateCommunity} />
         <main className="flex-1 min-w-0 bg-background ml-60 pt-14">
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             <Routes location={location} key={location.pathname}>
             <Route path="/" element={<Dashboard />} />
             <Route 
               path="/comunidad" 
               element={
-                <Community 
-                  isCreatePostModalOpen={isCreatePostModalOpen}
-                  setIsCreatePostModalOpen={setIsCreatePostModalOpen}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                />
+                <ErrorBoundary>
+                  <Community 
+                    isCreatePostModalOpen={isCreatePostModalOpen}
+                    setIsCreatePostModalOpen={setIsCreatePostModalOpen}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                  />
+                </ErrorBoundary>
               } 
             />
             <Route path="/explorar" element={<Explorar />} />

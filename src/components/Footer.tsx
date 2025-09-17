@@ -50,10 +50,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 mb-12">
           {/* Company Info */}
           <div className="lg:col-span-2">
-            <div className="flex items-center space-x-2 mb-6">
-              <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-2xl">H</span>
-              </div>
+            <div className="flex items-center space-x-3 mb-6">
+              <img 
+                src="/Guia_Repsol.svg" 
+                alt="Guía Repsol" 
+                className="h-8 w-auto filter brightness-0 invert"
+              />
               <span className="text-2xl font-bold">HostelMarket</span>
             </div>
             

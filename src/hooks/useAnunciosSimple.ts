@@ -17,7 +17,7 @@ export interface Anuncio {
   subcategoria?: string;
   precio: number;
   moneda: string;
-  ubicacion: string;
+  ubicacion: { region: string; province: string; city: string; };
   estado_producto: string;
   condicion: string;
   marca?: string;
@@ -51,7 +51,7 @@ export interface CreateAnuncioData {
   categoria: string;
   subcategoria?: string;
   precio: number;
-  ubicacion: string;
+  ubicacion: { region: string; province: string; city: string; };
   estado_producto: string;
   condicion: string;
   marca?: string;

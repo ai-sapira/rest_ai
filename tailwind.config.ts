@@ -19,8 +19,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				'heading': ['Outfit', 'sans-serif'],
-				'body': ['Inter', 'sans-serif'],
+				'heading': ['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+				'body': ['Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -67,7 +67,9 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				'repsol-blue': '#001E37',
+				'repsol-orange': '#FF6B35'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

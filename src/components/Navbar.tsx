@@ -10,10 +10,12 @@ const Navbar = () => {
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">H</span>
-            </div>
+          <div className="flex items-center space-x-3">
+            <img 
+              src="/Guia_Repsol.svg" 
+              alt="Guía Repsol" 
+              className="h-6 w-auto"
+            />
             <span className="text-xl font-bold text-primary">HostelMarket</span>
           </div>
           

@@ -234,7 +234,7 @@ export default function Profile() {
   };
 
   const handleEditAnuncio = (anuncioId: string) => {
-    navigate(`/platform/editar-anuncio/${anuncioId}`);
+    navigate(`/platform/anuncios/${anuncioId}/editar`);
   };
 
   const handleOfferResponse = async (offerId: string, action: 'accepted' | 'rejected') => {

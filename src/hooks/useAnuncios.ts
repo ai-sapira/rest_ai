@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface Anuncio {
   id: string;
@@ -119,8 +119,10 @@ export interface CreateAnuncioData {
 export function useAnuncios() {
   const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
   const [misAnuncios, setMisAnuncios] = useState<Anuncio[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [misAnunciosLoading, setMisAnunciosLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const { user } = useAuth();
 
   // Fetch all active anuncios
@@ -144,10 +146,14 @@ export function useAnuncios() {
 
   // Fetch user's anuncios
   const fetchMisAnuncios = async () => {
-    if (!user) return;
+    if (!user) {
+      setMisAnuncios([]);
+      return;
+    }
 
     try {
-      setLoading(true);
+      setMisAnunciosLoading(true);
+      setError(null);
       const { data, error } = await supabase
         .from('anuncios_with_provider')
         .select('*')
@@ -158,8 +164,9 @@ export function useAnuncios() {
       setMisAnuncios(data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching mis anuncios');
+      setMisAnuncios([]);
     } finally {
-      setLoading(false);
+      setMisAnunciosLoading(false);
     }
   };
 
@@ -266,19 +273,25 @@ export function useAnuncios() {
   };
 
   useEffect(() => {
-    fetchAnuncios();
-  }, []);
+    if (!initialized) {
+      fetchAnuncios();
+      setInitialized(true);
+    }
+  }, [initialized]);
 
   useEffect(() => {
-    if (user) {
+    if (user && initialized) {
       fetchMisAnuncios();
+    } else if (!user) {
+      setMisAnuncios([]);
     }
-  }, [user]);
+  }, [user, initialized]);
 
   return {
     anuncios,
     misAnuncios,
-    loading,
+    loading: misAnunciosLoading, // Para MisAnuncios page usa misAnunciosLoading
+    allAnunciosLoading: loading, // Para otras páginas
     error,
     createAnuncio,
     updateAnuncio,

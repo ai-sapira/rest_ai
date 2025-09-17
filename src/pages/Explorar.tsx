@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search,
   TrendingUp,
@@ -43,10 +42,13 @@ import {
   ChevronRight,
   Plus,
   ArrowRight,
-  BarChart3
+  BarChart3,
+  Sparkles,
+  TrendingDown
 } from "lucide-react";
-import { useCommunitiesSimple } from "@/hooks/useCommunitiesSimple";
-import { usePosts } from "@/hooks/usePosts";
+import { useCommunitiesBasic } from "@/hooks/useCommunitiesBasic";
+import { useCommunities } from "@/hooks/useCommunities";
+import { usePostsSimple } from "@/hooks/usePostsSimple";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 
@@ -99,9 +101,9 @@ export default function Explorar() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedTopic, setSelectedTopic] = useState<string>("all"); // Topic filter state
   
-  // Real data hooks
-  const { allCommunities, myCommunities, loading: communitiesLoading, refetchAll, refetchMine } = useCommunitiesSimple();
-  const { posts, loading: postsLoading } = usePosts();
+  // Real data hooks - using single unified hook
+  const { userCommunities, allCommunities, loading: communitiesLoading, refresh } = useCommunities();
+  const { posts, loading: postsLoading } = usePostsSimple();
 
   // Topic filters with categories for community filtering
   const topicFilters = [
@@ -128,13 +130,13 @@ export default function Explorar() {
     { id: "8", name: "recursoshumanos", postsCount: 91, growth: 22, category: "personal" },
   ];
 
-  // Explore categories - Updated to match sidebar routes
+  // Explore categories - Updated to match sidebar routes with Repsol blue
   const exploreCategories: ExploreCategory[] = [
     {
       id: "maquinaria",
       name: "Maquinaria",
       icon: Wrench,
-      color: "text-blue-600",
+      color: "text-repsol-blue",
       gradient: "from-blue-500 to-indigo-500",
       description: "Equipamiento y maquinaria profesional",
       count: 1850,
@@ -144,7 +146,7 @@ export default function Explorar() {
       id: "mobiliario",
       name: "Mobiliario",
       icon: Sofa,
-      color: "text-green-600",
+      color: "text-repsol-blue",
       gradient: "from-green-500 to-emerald-500",
       description: "Muebles y decoración para hostelería",
       count: 920,
@@ -153,7 +155,7 @@ export default function Explorar() {
       id: "utensilios",
       name: "Utensilios",
       icon: Utensils,
-      color: "text-orange-600",
+      color: "text-repsol-blue",
       gradient: "from-orange-500 to-red-500",
       description: "Herramientas y utensilios de cocina",
       count: 1240,
@@ -162,7 +164,7 @@ export default function Explorar() {
       id: "menaje",
       name: "Menaje",
       icon: Package,
-      color: "text-purple-600",
+      color: "text-repsol-blue",
       gradient: "from-purple-500 to-pink-500",
       description: "Vajilla, cristalería y mantelería",
       count: 980,
@@ -171,7 +173,7 @@ export default function Explorar() {
       id: "bodega",
       name: "Bodega",
       icon: Wine,
-      color: "text-red-600",
+      color: "text-repsol-blue",
       gradient: "from-red-500 to-rose-500",
       description: "Vinos, licores y bebidas",
       count: 650,
@@ -180,7 +182,7 @@ export default function Explorar() {
       id: "aprovisionamientos",
       name: "Aprovisionamientos",
       icon: Truck,
-      color: "text-indigo-600",
+      color: "text-repsol-blue",
       gradient: "from-indigo-500 to-blue-500",
       description: "Ingredientes y suministros",
       count: 1560,
@@ -317,10 +319,33 @@ export default function Explorar() {
     }
   ];
 
-  // Filter communities based on selected topic
-  const filteredCommunities = selectedTopic === "all" 
-    ? expandedCommunities 
-    : expandedCommunities.filter(community => community.category === selectedTopic);
+  // Filter communities based on selected topic and search query
+  const filteredCommunities = allCommunities.filter(community => {
+    // First filter by search query
+    const matchesSearch = searchQuery === "" || 
+      community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (community.description && community.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    if (!matchesSearch) return false;
+    
+    // Then filter by topic
+    if (selectedTopic === "all") return true;
+    
+    // Map topic filter to community categories
+    const topicMap: { [key: string]: string[] } = {
+      gastronomia: ['cocina', 'chef', 'gastronomia', 'cocinero'],
+      equipamiento: ['maquinaria', 'equipo', 'herramientas'],
+      gestion: ['administracion', 'gestion', 'gerencia'],
+      tecnologia: ['pos', 'tech', 'digital'],
+      // Add more mappings as needed
+    };
+    
+    const keywords = topicMap[selectedTopic] || [selectedTopic];
+    return keywords.some(keyword => 
+      community.name.toLowerCase().includes(keyword) ||
+      (community.description && community.description.toLowerCase().includes(keyword))
+    );
+  });
 
   // Handle follow/unfollow community
   const handleFollowCommunity = async (communityId: string) => {
@@ -331,7 +356,7 @@ export default function Explorar() {
 
     try {
       // Check if user is already a member
-      const isCurrentlyMember = myCommunities.some(mc => mc.id === communityId);
+      const isCurrentlyMember = userCommunities.some(mc => mc.id === communityId);
 
       if (isCurrentlyMember) {
         // Leave community
@@ -384,136 +409,175 @@ export default function Explorar() {
     <>
       <style>{customStyles}</style>
       <motion.main 
-        className="flex-1 bg-white min-h-screen"
+        className="flex-1 bg-background"
         initial="initial"
         animate="animate"
         exit="exit"
         variants={pageTransitionVariants}
       >
-        <div className="max-w-7xl mx-auto">
-        
-
-        {/* Horizontal Topic Filters - Reddit Style */}
-        <div className="px-6 py-4 bg-white border-b border-gray-100 pt-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide">
-              {topicFilters.map((topic) => (
-                <button
-                  key={topic.id}
-                  onClick={() => setSelectedTopic(topic.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
-                    selectedTopic === topic.id
-                      ? 'bg-gray-900 text-white shadow-sm'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-                  }`}
-                >
-                  <span>{topic.name}</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                    selectedTopic === topic.id
-                      ? 'bg-gray-700 text-gray-200'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {topic.count}
-                  </span>
-                </button>
-              ))}
+        {/* Modern Header */}
+        <div className="sticky top-14 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200">
+          <div className="px-6 py-4">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-repsol-blue rounded-lg shadow-md">
+                  <Compass className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Explorar</h1>
+                  <p className="text-sm text-gray-600">Descubre comunidades y categorías</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Main Content - Clean Layout */}
-        <div className="px-6 py-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Topic Filters - Optimized Style */}
+        <div className="bg-white border-b border-gray-100">
+          <div className="px-6 py-3">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                {topicFilters.map((topic) => (
+                  <button
+                    key={topic.id}
+                    onClick={() => setSelectedTopic(topic.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                      selectedTopic === topic.id
+                        ? 'bg-orange-500 text-white shadow-sm'
+                        : 'bg-gray-50 text-gray-700 hover:bg-orange-50 hover:text-orange-600 border border-gray-200'
+                    }`}
+                  >
+                    <span>{topic.name}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                      selectedTopic === topic.id
+                        ? 'bg-orange-400 text-orange-100'
+                        : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {topic.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Layout - Siguiendo patrón de Community */}
+        <div className="flex-1 bg-background">
+          <div className="max-w-7xl mx-auto flex gap-6 p-6">
+            
+            {/* Main Content Column */}
+            <div className="flex-1 min-w-0 space-y-6">
               
-              {/* Main Content Column */}
-              <div className="lg:col-span-2 space-y-8">
-                
-                {/* Featured Communities - Clean Design */}
-                <section>
+              {/* Featured Communities Section */}
+              <motion.section
+                variants={cardVariants}
+                initial="initial"
+                animate="animate"
+                className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300"
+              >
+                <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                      <Users className="h-5 w-5 text-purple-500" />
-                      <h2 className="text-xl font-semibold text-gray-900">
-                        Comunidades destacadas
+                      <div className="p-2 bg-repsol-blue rounded-lg shadow-md">
+                        <Users className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                          Comunidades destacadas
+                        </h2>
                         {selectedTopic !== "all" && (
-                          <span className="text-sm font-normal text-gray-500 ml-2">
-                            ({filteredCommunities.length} en {topicFilters.find(t => t.id === selectedTopic)?.name})
-                          </span>
+                          <p className="text-sm text-gray-600">
+                            {filteredCommunities.length} en {topicFilters.find(t => t.id === selectedTopic)?.name}
+                          </p>
                         )}
-                      </h2>
+                      </div>
                     </div>
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       onClick={() => navigate('/platform/mis-comunidades')}
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                     >
                       Ver todas
                       <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </div>
                   
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-3">
                     {communitiesLoading ? (
-                      // Loading skeleton
-                      <div className="space-y-4">
+                      // Loading skeleton - Estilo mejorado
+                      <div className="space-y-3">
                         {[1, 2, 3, 4].map((i) => (
-                          <div key={i} className="bg-white border border-gray-200 rounded-xl p-5 animate-pulse">
+                          <div key={i} className="bg-gray-50 rounded-lg p-4 animate-pulse">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
                                 <div className="flex-1">
                                   <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                                  <div className="h-3 bg-gray-300 rounded w-1/2 mb-2"></div>
+                                  <div className="h-3 bg-gray-300 rounded w-1/2 mb-1"></div>
                                   <div className="h-3 bg-gray-300 rounded w-1/4"></div>
                                 </div>
                               </div>
-                              <div className="w-16 h-8 bg-gray-300 rounded"></div>
+                              <div className="w-16 h-8 bg-gray-300 rounded-md"></div>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : allCommunities.length === 0 ? (
-                      // Empty state
-                      <div className="text-center py-8 text-gray-500">
-                        <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No se encontraron comunidades</p>
+                      // Empty state mejorado
+                      <div className="text-center py-12 text-gray-500">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Users className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="font-medium text-gray-900 mb-1">No hay comunidades</h3>
+                        <p className="text-sm">No se encontraron comunidades para mostrar</p>
                       </div>
                     ) : (
-                      // Real communities data
-                      allCommunities.slice(0, 8).map((community) => {
-                        const isJoined = myCommunities.some(mc => mc.id === community.id);
+                      // Real communities data - Estilo moderno
+                      allCommunities.slice(0, 6).map((community) => {
+                        const isJoined = userCommunities.some(mc => mc.id === community.id);
                         return (
-                          <div
+                          <motion.div
                             key={community.id}
-                            className="group bg-white border border-gray-200 rounded-xl p-5 hover:border-blue-200 hover:shadow-sm transition-all duration-200 cursor-pointer"
-                            onClick={() => navigate(`/platform/community/${community.slug}`)}
+                            variants={cardVariants}
+                            className="group bg-gray-50 hover:bg-white rounded-lg p-4 hover:shadow-sm border border-transparent hover:border-gray-200 transition-all duration-200 cursor-pointer"
+                            onClick={() => navigate(`/platform/comunidades/${community.slug}`)}
                           >
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center text-lg font-semibold text-blue-600">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold shadow-sm">
                                   {community.name[0]}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                    <h3 className="font-medium text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1">
                                       {community.name}
                                     </h3>
+                                    {community.member_count > 1000 && (
+                                      <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700">
+                                        Popular
+                                      </Badge>
+                                    )}
                                   </div>
-                                  <p className="text-sm text-gray-600 mb-2 line-clamp-1">
-                                    {community.description || "Sin descripción"}
+                                  <p className="text-sm text-gray-600 line-clamp-1 mb-1">
+                                    {community.description || "Comunidad de hostelería"}
                                   </p>
-                                  <span className="text-xs text-gray-500 font-medium">
-                                    {formatNumber(community.member_count)} miembros
-                                  </span>
+                                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <Users className="h-3 w-3" />
+                                    <span>{formatNumber(community.member_count)} miembros</span>
+                                  </div>
                                 </div>
                               </div>
                               
                               <Button
                                 size="sm"
                                 variant={isJoined ? "default" : "outline"}
-                                className="ml-4 shrink-0"
+                                className={`ml-3 shrink-0 h-8 px-3 text-xs ${
+                                  isJoined 
+                                    ? "bg-orange-500 hover:bg-orange-600 text-white" 
+                                    : "border-gray-300 text-gray-700 hover:border-orange-300 hover:text-orange-600"
+                                }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleFollowCommunity(community.id);
@@ -522,142 +586,192 @@ export default function Explorar() {
                                 {isJoined ? "Unido" : "Unirse"}
                               </Button>
                             </div>
-                          </div>
+                          </motion.div>
                         );
                       })
                     )}
                   </div>
-                </section>
-
-                {/* Categories Section - Clean Grid */}
-                <section>
+                </div>
+              </motion.section>
+              
+              {/* Categories Section - Estilo moderno */}
+              <motion.section
+                variants={cardVariants}
+                className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300"
+              >
+                <div className="p-6">
                   <div className="flex items-center gap-3 mb-6">
-                    <Grid className="h-5 w-5 text-blue-500" />
-                    <h2 className="text-xl font-semibold text-gray-900">Categorías populares</h2>
+                    <div className="p-2 bg-repsol-blue rounded-lg shadow-md">
+                      <Grid className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">Categorías populares</h2>
+                      <p className="text-sm text-gray-600">Explora por tipo de producto</p>
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {exploreCategories.map((category) => {
                       const IconComponent = category.icon;
                       return (
-                        <div
+                        <motion.div
                           key={category.id}
+                          variants={cardVariants}
                           onClick={() => navigate(`/platform/contratar/${category.id}`)}
-                          className={`group relative bg-white rounded-xl p-6 hover:shadow-sm transition-all duration-200 cursor-pointer ${
+                          className={`group relative bg-gray-50 hover:bg-white rounded-lg p-4 hover:shadow-sm border border-transparent hover:border-gray-200 transition-all duration-200 cursor-pointer ${
                             category.trending 
-                              ? 'border-2 border-orange-400 hover:border-orange-500' 
-                              : 'border border-gray-200 hover:border-blue-200'
+                              ? 'ring-2 ring-orange-200 bg-orange-50/50' 
+                              : ''
                           }`}
                         >
+                          {category.trending && (
+                            <div className="absolute -top-1 -right-1">
+                              <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                                <Flame className="h-3 w-3" />
+                                <span>Trending</span>
+                              </div>
+                            </div>
+                          )}
                           
-                          <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-blue-50 transition-colors">
-                              <IconComponent className={`h-6 w-6 ${category.color} group-hover:text-blue-600 transition-colors`} />
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+                              category.trending 
+                                ? 'bg-orange-100 group-hover:bg-orange-200' 
+                                : 'bg-white group-hover:bg-gray-100'
+                            }`}>
+                              <IconComponent className={`h-5 w-5 ${category.color} group-hover:scale-110 group-hover:text-repsol-blue transition-all duration-200`} />
                             </div>
                             
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
+                              <h3 className="font-medium text-gray-900 mb-1 group-hover:text-orange-600 transition-colors">
                                 {category.name}
                               </h3>
-                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                                {category.description}
-                              </p>
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-500 font-medium">
-                                  {formatNumber(category.count)} posts
+                                <span className="text-xs text-gray-600">
+                                  {formatNumber(category.count)} productos
                                 </span>
-                                {category.trending && (
-                                  <span className="text-xs text-orange-600 font-medium">Trending</span>
-                                )}
+                                <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-orange-500 transition-colors" />
                               </div>
                             </div>
                           </div>
-                        </div>
+                        </motion.div>
                       );
                     })}
                   </div>
-                </section>
-              </div>
-
-              {/* Clean Sidebar */}
-              <div className="lg:col-span-1">
-                <div className="sticky top-6 space-y-6">
-                  
-                  {/* Stats Card */}
-                  <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4">Estadísticas</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Comunidades activas</span>
-                        <span className="font-semibold text-blue-600">142</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Posts esta semana</span>
-                        <span className="font-semibold text-green-600">1,234</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Nuevos miembros</span>
-                        <span className="font-semibold text-purple-600">+89</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Popular Topics */}
-                  <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4">Popular esta semana</h3>
-                    <div className="space-y-3">
-                      {trendingTopics.slice(0, 5).map((topic, index) => (
-                        <div key={topic.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">#{topic.name}</p>
-                            <p className="text-xs text-gray-500">{topic.postsCount} posts</p>
-                          </div>
-                          <span className="text-xs text-green-600 font-medium">+{topic.growth}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Personalized Suggestions */}
-                  <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4">Sugerencias para ti</h3>
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <ChefHat className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-900">Explora gastronomía</span>
-                        </div>
-                        <p className="text-xs text-blue-700 mb-3">
-                          Contenido culinario basado en tu actividad
-                        </p>
-                        <Button size="sm" variant="outline" className="text-xs h-7 w-full border-blue-200 text-blue-700 hover:bg-blue-100">
-                          Ver más
-                        </Button>
-                      </div>
-                      
-                      <div className="p-4 rounded-lg bg-green-50 border border-green-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Users className="h-4 w-4 text-green-600" />
-                          <span className="text-sm font-medium text-green-900">Únete a comunidades</span>
-                        </div>
-                        <p className="text-xs text-green-700 mb-3">
-                          Conecta con profesionales de tu área
-                        </p>
-                        <Button size="sm" variant="outline" className="text-xs h-7 w-full border-green-200 text-green-700 hover:bg-green-100">
-                          Explorar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
+              </motion.section>
+            </div>
+
+            {/* Sidebar moderno - Estilo Community */}
+            <div className="w-80 flex-shrink-0 hidden lg:block">
+              <div className="sticky top-[calc(3.5rem+4rem)] max-h-[calc(100vh-8rem)] overflow-y-auto space-y-4">
+                
+                {/* Stats Card - Estilo moderno */}
+                <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-blue-50/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                      <div className="p-2 bg-repsol-blue rounded-full shadow-md">
+                        <BarChart3 className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-gray-900">Estadísticas</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-repsol-blue rounded-full"></div>
+                        <span className="text-sm text-gray-600">Comunidades activas</span>
+                      </div>
+                      <span className="font-semibold text-repsol-blue">142</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-repsol-blue rounded-full"></div>
+                        <span className="text-sm text-gray-600">Posts esta semana</span>
+                      </div>
+                      <span className="font-semibold text-repsol-blue">1,234</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-repsol-blue rounded-full"></div>
+                        <span className="text-sm text-gray-600">Nuevos miembros</span>
+                      </div>
+                      <span className="font-semibold text-repsol-blue">+89</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Trending Topics - Estilo moderno */}
+                <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-blue-50/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                      <div className="p-2 bg-repsol-blue rounded-full shadow-md">
+                        <TrendingUp className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-gray-900">Trending</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {trendingTopics.slice(0, 5).map((topic, index) => (
+                      <div key={topic.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-white transition-colors cursor-pointer border border-transparent hover:border-gray-200">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">#{topic.name}</p>
+                          <p className="text-xs text-gray-500">{topic.postsCount} posts</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                          <TrendingUp className="h-3 w-3" />
+                          <span>+{topic.growth}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* Sugerencias personalizadas - Estilo Repsol */}
+                <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white via-orange-50/30 to-blue-50/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                      <div className="p-2 bg-gradient-to-br from-repsol-blue to-repsol-orange rounded-full shadow-md">
+                        <Sparkles className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-gray-900">Para ti</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100/80 border border-orange-200/60">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ChefHat className="h-4 w-4 text-repsol-orange" />
+                        <span className="text-sm font-medium text-repsol-blue">Explora gastronomía</span>
+                      </div>
+                      <p className="text-xs text-gray-700 mb-3">
+                        Contenido culinario basado en tu actividad
+                      </p>
+                      <Button size="sm" variant="outline" className="text-xs h-7 w-full border-repsol-orange/30 text-repsol-orange hover:bg-repsol-orange hover:text-white transition-all duration-200">
+                        Ver más
+                      </Button>
+                    </div>
+                    
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50/60 to-blue-100/60 border border-blue-200/40">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="h-4 w-4 text-repsol-blue" />
+                        <span className="text-sm font-medium text-repsol-blue">Únete a comunidades</span>
+                      </div>
+                      <p className="text-xs text-gray-700 mb-3">
+                        Conecta con profesionales de tu área
+                      </p>
+                      <Button size="sm" variant="outline" className="text-xs h-7 w-full border-repsol-blue/30 text-repsol-blue hover:bg-repsol-blue hover:text-white transition-all duration-200">
+                        Explorar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
         </div>
-      </div>
       </motion.main>
     </>
   );

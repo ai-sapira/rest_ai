@@ -22,7 +22,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 
 interface PlatformNavbarProps {
   onCreatePost?: () => void;
@@ -148,10 +148,12 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
         <div className="flex h-14 items-center">
           {/* Left Section - Logo/Brand */}
           <div className="flex items-center gap-2 pl-4 w-64 flex-shrink-0">
-            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">H</span>
-            </div>
-            <span className="font-medium text-lg">hostelería</span>
+            <img 
+              src="/Guia_Repsol.svg" 
+              alt="Guía Repsol" 
+              className="h-6 w-auto"
+            />
+            <span className="font-medium text-lg text-orange-600">hostelería</span>
           </div>
 
           {/* Center Section - Search */}
@@ -167,12 +169,12 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
                     onBlur={handleSearchClose}
                     autoFocus
                     placeholder="Buscar en hostelería"
-                    className="w-full h-10 pl-10 pr-4 rounded-full border border-blue-500 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+                    className="w-full h-10 pl-10 pr-4 rounded-full border border-orange-500 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 transition-all text-sm"
                     aria-label="Buscar en hostelería"
                   />
                 ) : (
                   <button 
-                    className="w-full h-10 pl-10 pr-4 rounded-full border border-gray-300 bg-gray-50 hover:bg-white hover:border-gray-400 transition-all text-sm flex items-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full h-10 pl-10 pr-4 rounded-full border border-gray-300 bg-gray-50 hover:bg-white hover:border-orange-400 transition-all text-sm flex items-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                     onClick={handleSearchToggle}
                     aria-label="Abrir búsqueda"
                   >
@@ -231,7 +233,7 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
             {!shouldHideCreateButton && (
               <Button
                 onClick={onCreatePost}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 h-9 transition-colors"
+                className="bg-repsol-blue hover:bg-repsol-blue/90 text-white px-4 py-2 h-9 transition-colors shadow-md"
                 aria-label={`${createButtonText} - Abre formulario de creación`}
               >
                 <PlusCircle className="h-4 w-4 mr-2" aria-hidden="true" />
@@ -281,7 +283,7 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={profile?.avatar_url} alt={profile?.full_name || 'Usuario'} />
-                    <AvatarFallback className="bg-blue-500 text-white text-xs">
+                    <AvatarFallback className="bg-repsol-blue text-white text-xs">
                       {profile?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -328,9 +330,9 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
           <div className="w-60"></div>
           <div className="flex-1 flex justify-center px-8 relative">
             <div className="w-full max-w-2xl">
-              <div className="relative pb-6">
+              <div className="relative pb-4">
                 <nav 
-                  className="w-full bg-white rounded-b-xl shadow-lg p-2 flex relative z-10"
+                  className="w-full bg-white rounded-b-xl shadow-lg px-2 py-1.5 flex relative z-10"
                   role="tablist"
                   aria-label="Navegación principal"
                 >
@@ -351,10 +353,10 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
                         aria-selected={isActive}
                         aria-controls={`${tab.id}-panel`}
                         className={`
-                          flex-1 h-11 flex items-center justify-center gap-1.5 text-sm font-medium transition-all duration-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20
+                          flex-1 h-8 flex items-center justify-center gap-1.5 text-sm font-medium transition-all duration-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/20
                           ${isActive
-                            ? 'bg-blue-50 text-blue-700 shadow-sm' 
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                            ? 'bg-orange-50 text-orange-700 shadow-sm border border-orange-200' 
+                            : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50/50'
                           }
                         `}
                       >

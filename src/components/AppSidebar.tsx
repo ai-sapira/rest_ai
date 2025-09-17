@@ -39,7 +39,6 @@ const mainSocialItems = [
 
 const communityItems = [
   { title: "Crear comunidad", url: "#", icon: Plus, action: "create-community" },
-  { title: "Gestionar comunidades", url: "/platform/gestionar-comunidades", icon: Settings, disabled: true },
   { title: "Mis Comunidades", url: "/platform/mis-comunidades", icon: Hash },
 ];
 
@@ -113,11 +112,17 @@ export function AppSidebar({ onCreateCommunity }: AppSidebarProps = {}) {
                 to={item.url}
                 className={({ isActive }) => `flex items-center gap-2 p-2 rounded-md w-full text-left text-sm transition-colors ${
                   isActive 
-                    ? "bg-blue-100 text-blue-700 font-medium" 
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-orange-50 text-orange-700 font-medium border-r-2 border-orange-500" 
+                    : "text-gray-700 hover:bg-orange-50/50 hover:text-orange-600"
                 }`}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className={`h-4 w-4 ${
+                  item.title === "Explorar" 
+                    ? isActive(item.url) 
+                      ? "" // When active, inherit text color
+                      : "text-repsol-blue" // When inactive, use Repsol blue
+                    : "" // Other icons use default color
+                }`} />
                 <span>{item.title}</span>
               </NavLink>
           ))}
@@ -140,12 +145,7 @@ export function AppSidebar({ onCreateCommunity }: AppSidebarProps = {}) {
           {communityOpen && (
             <div className="ml-2 space-y-1">
               {communityItems.map((item) => (
-                item.disabled ? (
-                  <div key={item.title} className="flex items-center gap-2 p-2 rounded-md w-full text-left text-sm text-gray-700 hover:bg-gray-100 cursor-default">
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </div>
-                ) : item.action ? (
+                item.action ? (
                   <button
                     key={item.title}
                     onClick={() => {
@@ -163,8 +163,8 @@ export function AppSidebar({ onCreateCommunity }: AppSidebarProps = {}) {
                     to={item.url}
                     className={({ isActive }) => `flex items-center gap-2 p-2 rounded-md w-full text-left text-sm transition-colors ${
                       isActive 
-                        ? "bg-blue-100 text-blue-700 font-medium" 
-                        : "text-gray-700 hover:bg-gray-100"
+                        ? "bg-orange-50 text-orange-700 font-medium border-r-2 border-orange-500" 
+                        : "text-gray-700 hover:bg-orange-50/50 hover:text-orange-600"
                     }`}
                   >
                     <item.icon className="h-4 w-4" />
@@ -201,8 +201,8 @@ export function AppSidebar({ onCreateCommunity }: AppSidebarProps = {}) {
                     to={item.url}
                     className={({ isActive }) => `flex items-center gap-2 p-2 rounded-md w-full text-left text-sm transition-colors ${
                       isActive 
-                        ? "bg-blue-100 text-blue-700 font-medium" 
-                        : "text-gray-700 hover:bg-gray-100"
+                        ? "bg-orange-50 text-orange-700 font-medium border-r-2 border-orange-500" 
+                        : "text-gray-700 hover:bg-orange-50/50 hover:text-orange-600"
                     }`}
                   >
                     <item.icon className="h-4 w-4" />
@@ -252,8 +252,8 @@ export function AppSidebar({ onCreateCommunity }: AppSidebarProps = {}) {
                     to={item.url}
                     className={({ isActive }) => `flex items-center gap-2 p-2 rounded-md w-full text-left text-sm transition-colors ${
                       isActive 
-                        ? "bg-blue-100 text-blue-700 font-medium" 
-                        : "text-gray-700 hover:bg-gray-100"
+                        ? "bg-orange-50 text-orange-700 font-medium border-r-2 border-orange-500" 
+                        : "text-gray-700 hover:bg-orange-50/50 hover:text-orange-600"
                     }`}
                   >
                     <item.icon className="h-4 w-4" />
@@ -269,8 +269,8 @@ export function AppSidebar({ onCreateCommunity }: AppSidebarProps = {}) {
                     to={item.url}
                     className={({ isActive }) => `flex items-center gap-2 p-2 rounded-md w-full text-left text-sm transition-colors ${
                       isActive 
-                        ? "bg-blue-100 text-blue-700 font-medium" 
-                        : "text-gray-700 hover:bg-gray-100"
+                        ? "bg-orange-50 text-orange-700 font-medium border-r-2 border-orange-500" 
+                        : "text-gray-700 hover:bg-orange-50/50 hover:text-orange-600"
                     }`}
                   >
                     <item.icon className="h-4 w-4" />

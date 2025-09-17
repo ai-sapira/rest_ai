@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { useNavigationTransition, pageTransitionVariants } from "@/hooks/useNavigationTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,7 +17,6 @@ import {
   Eye,
   Heart,
   MessageCircle,
-  Share2,
   Star,
   Truck,
   Shield,
@@ -23,15 +24,10 @@ import {
   Euro,
   Ruler,
   Package,
-  Phone,
   Mail,
-  Flag,
   ShoppingCart,
   Edit,
-  Pause,
-  BarChart3,
-  Trash2,
-  Play
+  Trash2
 } from "lucide-react";
 import { PurchaseModal } from "@/components/PurchaseModal";
 import { OfferModal } from "@/components/OfferModal";
@@ -39,25 +35,24 @@ import { OfferModal } from "@/components/OfferModal";
 export default function AnuncioDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { anuncio, loading: anuncioLoading } = useAnuncio(id!);
+  const { navigateWithDelay } = useNavigationTransition();
+  
+  // ✅ SINGLE SOURCE OF TRUTH - Use only hook loading state
+  const { anuncio, loading, error } = useAnuncio(id!);
   const { incrementViews } = useAnunciosSimple();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
+  
+  // ✅ SEPARATE CONCERNS - Only UI-specific states
   const [isFavorite, setIsFavorite] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
 
+  // ✅ SIDE EFFECTS - Increment views when anuncio loads successfully
   useEffect(() => {
-    if (id && anuncios.length > 0) {
-      const foundAnuncio = anuncios.find(a => a.id === id);
-      if (foundAnuncio) {
-        setAnuncio(foundAnuncio);
-        // Increment views when viewing the detail
-        incrementViews(id);
-      }
-      setLoading(false);
+    if (id && anuncio && !loading) {
+      incrementViews(id);
     }
-  }, [id, anuncio, incrementViews]);
+  }, [id, anuncio, loading, incrementViews]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -95,9 +90,16 @@ export default function AnuncioDetail() {
     });
   };
 
+  // ✅ PROPER LOADING STATE - Use hook loading
   if (loading) {
     return (
-      <main className="flex-1 p-6">
+      <motion.main 
+        className="flex-1 p-6"
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        variants={pageTransitionVariants}
+      >
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Header Skeleton */}
           <div className="flex items-center gap-4">
@@ -117,13 +119,49 @@ export default function AnuncioDetail() {
             </div>
           </div>
         </div>
-      </main>
+      </motion.main>
     );
   }
 
-  if (!anuncio) {
+  // ✅ ERROR HANDLING - Show error state if query failed
+  if (error) {
     return (
-      <main className="flex-1 p-6">
+      <motion.main 
+        className="flex-1 p-6"
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        variants={pageTransitionVariants}
+      >
+        <div className="max-w-6xl mx-auto">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Error al cargar el anuncio</h3>
+              <p className="text-muted-foreground mb-4">
+                {error}
+              </p>
+              <Button onClick={() => navigate(-1)} variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </motion.main>
+    );
+  }
+
+  // ✅ NOT FOUND STATE - Only after loading completed
+  if (!loading && !anuncio) {
+    return (
+      <motion.main 
+        className="flex-1 p-6"
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        variants={pageTransitionVariants}
+      >
         <div className="max-w-6xl mx-auto">
           <Card>
             <CardContent className="p-8 text-center">
@@ -138,12 +176,18 @@ export default function AnuncioDetail() {
             </CardContent>
           </Card>
         </div>
-      </main>
+      </motion.main>
     );
   }
 
   return (
-    <main className="flex-1 p-6">
+    <motion.main 
+      className="flex-1 p-6"
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransitionVariants}
+    >
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -170,14 +214,6 @@ export default function AnuncioDetail() {
               <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
               {isFavorite ? 'Guardado' : 'Guardar'}
             </Button>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Share2 className="h-4 w-4" />
-              Compartir
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Flag className="h-4 w-4" />
-              Reportar
-            </Button>
           </div>
         </div>
 
@@ -188,7 +224,7 @@ export default function AnuncioDetail() {
             {/* Image Gallery */}
             <Card>
               <CardContent className="p-0">
-                <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="aspect-video bg-gradient-to-br from-blue-50 to-orange-50 rounded-lg flex items-center justify-center">
                   {anuncio.imagenes && anuncio.imagenes.length > 0 ? (
                     <img 
                       src={anuncio.imagenes[0]} 
@@ -196,9 +232,12 @@ export default function AnuncioDetail() {
                       className="w-full h-full object-cover rounded-lg"
                     />
                   ) : (
-                    <div className="text-center text-gray-500">
-                      <Package className="h-16 w-16 mx-auto mb-2" />
-                      <p>Sin imágenes disponibles</p>
+                    <div className="flex items-center justify-center p-12">
+                      <img 
+                        src="/Guia_Repsol.svg" 
+                        alt="Guía Repsol" 
+                        className="w-32 h-auto opacity-30"
+                      />
                     </div>
                   )}
                 </div>
@@ -363,32 +402,12 @@ export default function AnuncioDetail() {
                     <Button 
                       className="w-full gap-2" 
                       size="lg"
-                      onClick={() => navigate(`/platform/editar-anuncio/${anuncio.id}`)}
+                      onClick={() => navigate(`/platform/anuncios/${anuncio.id}/editar`)}
                     >
                       <Edit className="h-4 w-4" />
                       Editar anuncio
                     </Button>
                     
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button variant="outline" className="gap-2">
-                        {anuncio.estado === 'activo' ? (
-                          <>
-                            <Pause className="h-4 w-4" />
-                            Pausar
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-4 w-4" />
-                            Activar
-                          </>
-                        )}
-                      </Button>
-                      
-                      <Button variant="outline" className="gap-2">
-                        <BarChart3 className="h-4 w-4" />
-                        Estadísticas
-                      </Button>
-                    </div>
                     
                     <Separator />
                     
@@ -422,15 +441,6 @@ export default function AnuncioDetail() {
                       </>
                     )}
                     
-                    <Button variant="outline" className="w-full gap-2">
-                      <MessageCircle className="h-4 w-4" />
-                      Contactar vendedor
-                    </Button>
-                    
-                    <Button variant="outline" className="w-full gap-2">
-                      <Phone className="h-4 w-4" />
-                      Llamar
-                    </Button>
                   </>
                 ) : (
                   /* Not Logged In - Login Prompt */
@@ -459,10 +469,10 @@ export default function AnuncioDetail() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="font-medium">{anuncio.ubicacion.city}</p>
-                    <p className="text-sm text-muted-foreground">
+                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-900 break-words">{anuncio.ubicacion.city}</p>
+                    <p className="text-sm text-muted-foreground break-words">
                       {anuncio.ubicacion.province}, {anuncio.ubicacion.region}
                     </p>
                   </div>
@@ -549,6 +559,6 @@ export default function AnuncioDetail() {
           />
         </>
       )}
-    </main>
+    </motion.main>
   );
 }

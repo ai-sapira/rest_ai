@@ -67,13 +67,13 @@ const Features = () => {
           {features.map((feature, index) => (
             <div 
               key={index}
-              className="bg-white p-8 rounded-xl shadow-card hover:shadow-hover transition-all duration-300 transform hover:scale-105 group"
+              className="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 group border-l-4 border-orange-500 hover:border-orange-600"
             >
-              <div className={`w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center mb-6 group-hover:animate-float`}>
-                <feature.icon className="w-8 h-8 text-white" />
+              <div className={`w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mb-6 group-hover:animate-bounce shadow-lg`}>
+                <feature.icon className="w-10 h-10 text-white" />
               </div>
               
-              <h3 className="text-xl font-semibold text-foreground mb-4">
+              <h3 className="text-xl font-semibold text-blue-900 mb-4 group-hover:text-orange-600 transition-colors">
                 {feature.title}
               </h3>
               
@@ -86,12 +86,12 @@ const Features = () => {
         
         {/* CTA Section */}
         <div className="mt-16 text-center">
-          <div className="bg-gradient-primary rounded-2xl p-12 text-white">
+          <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-2xl p-12 text-white shadow-2xl">
             <div className="flex items-center justify-center mb-6">
               <div className="flex -space-x-2">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="w-12 h-12 rounded-full bg-secondary border-4 border-white flex items-center justify-center">
-                    <User className="w-6 h-6 text-primary" />
+                  <div key={i} className="w-12 h-12 rounded-full bg-orange-500 border-4 border-white flex items-center justify-center shadow-lg">
+                    <User className="w-6 h-6 text-white" />
                   </div>
                 ))}
               </div>
@@ -100,7 +100,7 @@ const Features = () => {
             
             <div className="flex items-center justify-center mb-6">
               {[1, 2, 3, 4, 5].map((i) => (
-                <Star key={i} className="w-6 h-6 text-secondary fill-current" />
+                <Star key={i} className="w-6 h-6 text-orange-400 fill-current" />
               ))}
               <span className="ml-2 text-lg">4.9/5 de satisfacción</span>
             </div>
@@ -113,10 +113,10 @@ const Features = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-secondary text-secondary-foreground px-8 py-4 rounded-lg font-semibold hover:bg-secondary-hover transition-all duration-300 transform hover:scale-105">
+              <button className="bg-orange-500 text-white px-8 py-4 rounded-lg font-semibold hover:bg-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg">
                 Explorar Marketplace
               </button>
-              <button className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-primary transition-all duration-300">
+              <button className="border-2 border-orange-400 text-orange-400 bg-white px-8 py-4 rounded-lg font-semibold hover:bg-orange-500 hover:text-white transition-all duration-300 transform hover:scale-105 shadow-lg">
                 Solicitar Demo
               </button>
             </div>

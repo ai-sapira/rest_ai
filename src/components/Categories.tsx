@@ -73,9 +73,9 @@ const Categories = () => {
     <section id="marketplace" className="py-20 bg-background">
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-blue-900 mb-6">
             Explora nuestras 
-            <span className="text-primary"> categorías</span>
+            <span className="text-orange-500 bg-orange-100 px-3 py-1 rounded-lg"> categorías</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Encuentra exactamente lo que necesitas para tu negocio hostelero. 
@@ -87,7 +87,7 @@ const Categories = () => {
           {categories.map((category, index) => (
             <div 
               key={index}
-              className="group relative bg-white rounded-2xl p-6 shadow-card hover:shadow-hover transition-all duration-300 transform hover:scale-105 cursor-pointer overflow-hidden"
+              className="group relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer overflow-hidden border-2 border-transparent hover:border-orange-200"
             >
               {/* Background gradient on hover */}
               <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
@@ -97,7 +97,7 @@ const Categories = () => {
                   <category.icon className="w-8 h-8 text-white" />
                 </div>
                 
-                <h3 className="text-xl font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+                <h3 className="text-xl font-semibold text-blue-900 mb-2 group-hover:text-orange-600 transition-colors">
                   {category.title}
                 </h3>
                 
@@ -106,10 +106,10 @@ const Categories = () => {
                 </p>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
+                  <span className="text-xs font-medium text-orange-600 bg-orange-100 px-3 py-1 rounded-full">
                     {category.itemCount}
                   </span>
-                  <span className="text-primary text-sm font-medium group-hover:translate-x-1 transition-transform">
+                  <span className="text-orange-500 text-sm font-medium group-hover:translate-x-1 transition-transform hover:text-orange-600">
                     Ver más →
                   </span>
                 </div>

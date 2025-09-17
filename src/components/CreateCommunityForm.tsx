@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { X, ChevronRight, Upload, Globe, Lock, Users, Hash, Tag, Shield, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 
 interface CreateCommunityFormProps {
   isOpen: boolean;

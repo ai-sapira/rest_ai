@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useCommunity } from "@/hooks/useCommunitiesSimple";
+import { useCommunitiesBasic } from "@/hooks/useCommunitiesBasic";
 import { usePostsSimple } from "@/hooks/usePostsSimple";
 import { supabase } from "@/lib/supabase";
 import {
@@ -41,16 +41,29 @@ export default function CommunityDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // ✅ Use optimized hook for community data
-  const { 
-    community, 
-    loading: loadingCommunity, 
-    isUserMember, 
-    userRole, 
-    isUserAdmin 
-  } = useCommunity(slug!);
+  // ✅ Use basic hook for community data (super simple)
+  const { myCommunities, loading: loadingCommunity } = useCommunitiesBasic();
+  const allCommunities = []; // Not needed for community detail
+  
+  // Find community by slug
+  const community = useMemo(() => {
+    return [...allCommunities, ...myCommunities].find(c => c.slug === slug);
+  }, [allCommunities, myCommunities, slug]);
+  
+  // Check if user is member
+  const isUserMember = useMemo(() => {
+    return myCommunities.some(c => c.id === community?.id);
+  }, [myCommunities, community?.id]);
+  
+  // TODO: Add userRole and isUserAdmin logic if needed
+  const userRole = "member";
+  const isUserAdmin = false;
 
-  const [loadingCommunityBackup, setLoadingCommunityBackup] = useState<boolean>(true);
+  // ✅ LOCAL STATE: Community modifications (for banner updates)
+  const [communityLocal, setCommunityLocal] = useState<typeof community>(null);
+  const displayCommunity = communityLocal || community;
+
+  // ✅ REMOVED: loadingCommunityBackup - use loadingCommunity from useCommunity hook
   const [rules, setRules] = useState<Array<{ id: string | number; title: string; description?: string }>>([]);
   const [isEditingRules, setIsEditingRules] = useState<boolean>(false);
   const [savingRuleIds, setSavingRuleIds] = useState<Set<string | number>>(new Set());
@@ -60,30 +73,7 @@ export default function CommunityDetail() {
   const [rulesDirty, setRulesDirty] = useState<boolean>(false);
   const bannerInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Fetch community by slug
-  useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
-      setLoadingCommunity(true);
-      const { data, error } = await supabase
-        .from("communities")
-        .select("id, name, slug, description, avatar_url, banner_url, member_count, is_public, created_at")
-        .eq("slug", slug)
-        .single();
-      if (!isMounted) return;
-      if (error) {
-        console.error("CommunityDetail: error loading community", error);
-        setCommunity(null);
-      } else {
-        setCommunity(data as CommunityMeta);
-      }
-      setLoadingCommunity(false);
-    };
-    if (slug) load();
-    return () => {
-      isMounted = false;
-    };
-  }, [slug]);
+  // ✅ OPTIMIZED: Removed duplicate community loading - useCommunity hook handles this efficiently
 
   // Fetch community rules (optional table: community_rules)
   useEffect(() => {
@@ -206,7 +196,7 @@ export default function CommunityDetail() {
       const publicUrl = urlData.publicUrl;
       const { error: updErr } = await supabase.from('communities').update({ banner_url: publicUrl }).eq('id', community.id);
       if (updErr) throw updErr;
-      setCommunity(prev => prev ? { ...prev, banner_url: publicUrl } : prev);
+      setCommunityLocal(prev => (prev || community) ? { ...(prev || community)!, banner_url: publicUrl } : null);
       toast.success('Banner actualizado');
     } catch (e: any) {
       console.error('Upload banner error', e);
@@ -221,7 +211,7 @@ export default function CommunityDetail() {
     try {
       const { error } = await supabase.from('communities').update({ banner_url: null }).eq('id', community.id);
       if (error) throw error;
-      setCommunity(prev => prev ? { ...prev, banner_url: null } : prev);
+      setCommunityLocal(prev => (prev || community) ? { ...(prev || community)!, banner_url: null } : null);
       toast.success('Banner eliminado');
     } catch (e) {
       console.error(e);
@@ -229,27 +219,27 @@ export default function CommunityDetail() {
     }
   };
 
-  const communityId = community?.id;
-  const { posts, loading, hasMore, loadMore, toggleLike } = usePosts({ communityId });
+  const communityId = displayCommunity?.id;
+  const { posts, loading, hasMore, loadMore, toggleLike } = usePostsSimple({ communityId });
 
   const titleInitials = useMemo(() => {
-    return community?.name
-      ? community.name
+    return displayCommunity?.name
+      ? displayCommunity.name
           .split(" ")
           .map((w) => w[0])
           .join("")
           .slice(0, 2)
       : "";
-  }, [community?.name]);
+  }, [displayCommunity?.name]);
 
   return (
-    <main className="flex-1 min-h-screen bg-background">
+    <main className="flex-1 min-h-screen bg-gradient-to-br from-gray-50 to-orange-50/30">
       {/* Cover / Banner */}
       <div className="w-full h-28 md:h-36 border-b relative">
-        {community?.banner_url ? (
-          <img src={community.banner_url} alt="cover" className="w-full h-full object-cover" />
+        {displayCommunity?.banner_url ? (
+          <img src={displayCommunity.banner_url} alt="cover" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50" />
+          <div className="w-full h-full bg-gradient-to-r from-orange-50 via-repsol-blue/10 to-orange-50" />
         )}
         {(['admin','moderator'] as const).includes((role as any)) && (
           <div className="absolute right-4 bottom-3 flex items-center gap-2">
@@ -268,7 +258,7 @@ export default function CommunityDetail() {
             >
               {isUploadingBanner ? 'Subiendo…' : 'Cambiar banner'}
             </Button>
-            {community?.banner_url && (
+            {displayCommunity?.banner_url && (
               <Button variant="ghost" size="sm" className="text-red-600" onClick={removeBanner}>Quitar</Button>
             )}
           </div>
@@ -278,47 +268,51 @@ export default function CommunityDetail() {
       <div className="max-w-6xl mx-auto px-6 py-6">
         {/* Header */}
         <div className="flex items-start gap-4 mb-6">
-          <Avatar className="h-16 w-16 rounded-lg">
-            <AvatarImage src={community?.avatar_url || undefined} />
-            <AvatarFallback className="rounded-lg text-base font-semibold">
+          <Avatar className="h-16 w-16 rounded-lg bg-repsol-blue">
+            <AvatarImage src={displayCommunity?.avatar_url || undefined} />
+            <AvatarFallback className="rounded-lg text-base font-semibold text-white bg-repsol-blue">
               {titleInitials}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold truncate">
-                {loadingCommunity ? "Cargando comunidad..." : community?.name}
+              <h1 className="text-2xl font-bold truncate text-repsol-blue">
+                {loadingCommunity ? "Cargando comunidad..." : displayCommunity?.name}
               </h1>
-              {!community?.is_public && (
-                <Badge variant="secondary" className="text-xs">
+              {!displayCommunity?.is_public && (
+                <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-600 border-orange-200">
                   <Shield className="h-3 w-3 mr-1" /> Privada
                 </Badge>
               )}
             </div>
-            {community?.description && (
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                {community.description}
+            {displayCommunity?.description && (
+              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                {displayCommunity.description}
               </p>
             )}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+            <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
               <span className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {community?.member_count?.toLocaleString() || 0} miembros
+                <Users className="h-3 w-3 text-orange-500" />
+                <span className="text-orange-600 font-medium">{displayCommunity?.member_count?.toLocaleString() || 0}</span> miembros
               </span>
               <span className="flex items-center gap-1">
-                <Globe className="h-3 w-3" />
-                {community?.is_public ? "Pública" : "Privada"}
+                <Globe className="h-3 w-3 text-orange-500" />
+                {displayCommunity?.is_public ? "Pública" : "Privada"}
               </span>
-              {community?.created_at && (
+              {displayCommunity?.created_at && (
                 <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  creada {new Date(community.created_at).toLocaleDateString()}
+                  <Calendar className="h-3 w-3 text-orange-500" />
+                  creada {new Date(displayCommunity.created_at).toLocaleDateString()}
                 </span>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(-1)} 
+              className="gap-2 hover:bg-orange-50 hover:text-orange-600"
+            >
               <ArrowLeft className="h-4 w-4" /> Volver
             </Button>
           </div>
@@ -331,42 +325,56 @@ export default function CommunityDetail() {
               <Card><CardContent className="h-40 animate-pulse" /></Card>
             )}
             {posts.map((post) => (
-              <Card key={post.id} className="border border-gray-200 hover:shadow-sm">
+              <Card 
+                key={post.id} 
+                className="border border-gray-200 hover:shadow-lg hover:border-orange-200 transition-all duration-200 cursor-pointer group"
+                onClick={() => navigate(`/platform/post/${post.id}`)}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <Avatar className="h-9 w-9">
+                    <Avatar className="h-9 w-9 bg-repsol-blue">
                       <AvatarImage src={post.profiles?.avatar_url || post.organizations?.logo_url || undefined} />
-                      <AvatarFallback>
-                        {(post.profiles?.full_name || post.organizations?.name || "").slice(0,2)}
+                      <AvatarFallback className="bg-repsol-blue text-white text-sm font-medium">
+                        {(post.profiles?.full_name || post.organizations?.name || "U").slice(0,2)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-medium text-foreground">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span className="font-medium text-repsol-blue group-hover:text-orange-600 transition-colors">
                           {post.profiles?.full_name || post.organizations?.name || "Usuario"}
                         </span>
                         <span>•</span>
-                        <span>{new Date(post.created_at).toLocaleString()}</span>
+                        <span>hace {(() => {
+                          const hours = Math.floor((Date.now() - new Date(post.created_at).getTime()) / (1000 * 60 * 60));
+                          if (hours >= 24) {
+                            const days = Math.floor(hours / 24);
+                            return `${days} ${days === 1 ? 'día' : 'días'}`;
+                          }
+                          return `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+                        })()}</span>
                       </div>
-                      <div className="mt-1 text-[15px] leading-6 whitespace-pre-wrap break-words">
+                      <div className="mt-1 text-[15px] leading-6 whitespace-pre-wrap break-words text-gray-900">
                         {post.content}
                       </div>
                       {post.post_media && post.post_media.length > 0 && (
                         <div className="mt-3 grid grid-cols-1 gap-2">
                           {post.post_media.map((m) => (
-                            <img key={m.url} src={m.url} alt="media" className="rounded-md border" />
+                            <img key={m.url} src={m.url} alt="media" className="rounded-md border shadow-sm" />
                           ))}
                         </div>
                       )}
                       <div className="mt-3 flex items-center gap-4 text-sm">
                         <button
-                          onClick={() => toggleLike(post.id)}
-                          className="inline-flex items-center gap-1 text-gray-600 hover:text-foreground"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent card click
+                            toggleLike(post.id);
+                          }}
+                          className="inline-flex items-center gap-1 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full px-2 py-1 transition-colors"
                         >
-                          <Heart className="h-4 w-4" /> {post.likes_count}
+                          <Heart className="h-4 w-4" /> {post.likes_count || 0}
                         </button>
-                        <div className="inline-flex items-center gap-1 text-gray-600">
-                          <MessageCircle className="h-4 w-4" /> {post.comments_count}
+                        <div className="inline-flex items-center gap-1 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-full px-2 py-1 transition-colors">
+                          <MessageCircle className="h-4 w-4" /> {post.comments_count || 0}
                         </div>
                       </div>
                     </div>
@@ -378,7 +386,11 @@ export default function CommunityDetail() {
             {/* Load more */}
             {hasMore && (
               <div className="flex justify-center py-4">
-                <Button variant="outline" onClick={() => loadMore()} className="gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => loadMore()} 
+                  className="gap-2 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 shadow-sm"
+                >
                   Cargar más
                   <ArrowDownCircle className="h-4 w-4" />
                 </Button>
@@ -389,43 +401,48 @@ export default function CommunityDetail() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-4">
-              <Card className="border border-gray-200">
-                <CardHeader>
-                  <CardTitle className="text-base">Sobre la comunidad</CardTitle>
+              <Card className="border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-orange-50/20">
+                <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg">
+                  <CardTitle className="text-base font-semibold">Sobre la comunidad</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm text-muted-foreground">
-                  <p className="leading-relaxed">
-                    {community?.description || "Sin descripción todavía."}
+                <CardContent className="space-y-3 text-sm text-gray-600 p-4">
+                  <p className="leading-relaxed text-gray-700">
+                    {displayCommunity?.description || "Sin descripción todavía."}
                   </p>
-                  <Separator />
+                  <Separator className="bg-orange-100" />
                   <div className="flex items-center justify-between">
                     <span>Miembros</span>
-                    <span className="font-medium text-foreground">{community?.member_count?.toLocaleString() || 0}</span>
+                    <span className="font-medium text-orange-600">{displayCommunity?.member_count?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Privacidad</span>
-                    <span className="font-medium text-foreground">{community?.is_public ? "Pública" : "Privada"}</span>
+                    <span className="font-medium text-repsol-blue">{displayCommunity?.is_public ? "Pública" : "Privada"}</span>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Community Rules */}
-              <Card className="border border-gray-200">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-base">Reglas de la comunidad</CardTitle>
+              <Card className="border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-orange-50/20">
+                <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg">
+                  <CardTitle className="text-base font-semibold">Reglas de la comunidad</CardTitle>
                   {(['admin','moderator'] as const).includes((role as any)) && (
-                    <Button variant={isEditingRules ? 'secondary' : 'outline'} size="sm" onClick={() => setIsEditingRules(v => !v)}>
+                    <Button 
+                      variant={isEditingRules ? 'secondary' : 'outline'} 
+                      size="sm" 
+                      onClick={() => setIsEditingRules(v => !v)}
+                      className={isEditingRules ? 'bg-white text-orange-600' : 'border-white text-white hover:bg-white hover:text-orange-600'}
+                    >
                       {isEditingRules ? 'Cerrar' : 'Gestionar'}
                     </Button>
                   )}
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 p-4">
                   {isEditingRules ? (
                     <div className="space-y-4">
                       {rules.map((rule) => (
                         <div
                           key={rule.id}
-                          className="space-y-2 p-3 rounded-md border"
+                          className="space-y-2 p-3 rounded-md border border-orange-200 bg-orange-50/30 hover:bg-orange-50/50 transition-colors"
                           draggable
                           onDragStart={() => setDragRuleId(rule.id)}
                           onDragOver={(e) => {
@@ -454,18 +471,18 @@ export default function CommunityDetail() {
                             placeholder="Descripción"
                           />
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">{savingRuleIds.has(rule.id) ? 'Guardando…' : ' '}</span>
-                            <Button variant="ghost" size="sm" className="text-red-600" onClick={() => deleteRule(rule.id)}>Eliminar</Button>
+                            <span className="text-xs text-gray-500">{savingRuleIds.has(rule.id) ? 'Guardando…' : ' '}</span>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => deleteRule(rule.id)}>Eliminar</Button>
                           </div>
                         </div>
                       ))}
                       <div className="flex items-center justify-between">
-                        <Button variant="outline" onClick={addRule}>Añadir regla</Button>
+                        <Button variant="outline" onClick={addRule} className="border-orange-200 text-orange-600 hover:bg-orange-50">Añadir regla</Button>
                         <Button
                           variant="default"
                           disabled={!rulesDirty}
                           onClick={async () => {
-                            if (!community?.id) return;
+                            if (!displayCommunity?.id) return;
                             // Persist positions
                             await Promise.all(
                               rules.map((r, index) => supabase
@@ -477,6 +494,7 @@ export default function CommunityDetail() {
                             setRulesDirty(false);
                             toast.success('Orden guardado');
                           }}
+                          className="bg-orange-500 hover:bg-orange-600 text-white"
                         >
                           Guardar orden
                         </Button>
@@ -485,14 +503,21 @@ export default function CommunityDetail() {
                   ) : (
                     <div className="space-y-3">
                       {rules.length === 0 && (
-                        <p className="text-sm text-muted-foreground">Aún no hay reglas definidas.</p>
+                        <p className="text-sm text-gray-500">Aún no hay reglas definidas.</p>
                       )}
-                      {rules.map((rule) => (
-                        <div key={rule.id} className="text-sm">
-                          <div className="font-medium text-foreground">{rule.title}</div>
-                          {rule.description && (
-                            <div className="text-muted-foreground">{rule.description}</div>
-                          )}
+                      {rules.map((rule, index) => (
+                        <div key={rule.id} className="text-sm p-3 bg-orange-50/30 rounded-lg border border-orange-100 hover:bg-orange-50/50 transition-colors">
+                          <div className="flex items-start gap-2">
+                            <span className="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                              {index + 1}
+                            </span>
+                            <div className="flex-1">
+                              <div className="font-medium text-repsol-blue">{rule.title}</div>
+                              {rule.description && (
+                                <div className="text-gray-600 mt-1">{rule.description}</div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>

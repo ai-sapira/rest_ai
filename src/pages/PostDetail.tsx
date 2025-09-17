@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { useCommunitiesSimple } from "@/hooks/useCommunitiesSimple";
+import { useCommunitiesBasic } from "@/hooks/useCommunitiesBasic";
 import { usePost } from "@/hooks/usePostsSimple";
 import { motion } from "framer-motion";
 import { pageTransitionVariants } from "@/hooks/useNavigationTransition";
@@ -90,7 +90,7 @@ export default function PostDetail() {
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { myCommunities } = useCommunitiesSimple();
+  const { myCommunities } = useCommunitiesBasic();
   
   // ✅ Use optimized hook with robust error handling and like functionality
   const { post, loading, error, toggleLike, isTogglingLike } = usePost(postId || '');
@@ -335,31 +335,36 @@ export default function PostDetail() {
 
   return (
     <motion.div 
-      className="min-h-screen bg-gray-50"
+      className="min-h-screen bg-gradient-to-br from-gray-50 to-orange-50/30"
       initial="initial"
       animate="animate"
       exit="exit"
       variants={pageTransitionVariants}
     >
       {/* Reddit-style layout: Two columns */}
-      <div className="max-w-7xl mx-auto flex gap-6 py-6 px-4">
+      <div className="max-w-7xl mx-auto flex gap-6 py-8 px-4">
         
         {/* Main Content Column */}
         <div className="flex-1 max-w-3xl">
-          {/* Breadcrumb Navigation - Reddit style */}
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+          {/* Enhanced Back Navigation */}
+          <div className="flex items-center gap-3 mb-6">
             <Button 
               onClick={() => navigate('/platform/comunidad')} 
-              variant="ghost" 
+              variant="outline" 
               size="sm"
-              className="h-6 px-1 hover:bg-gray-100"
+              className="flex items-center gap-2 h-8 px-3 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 transition-all"
             >
               <ArrowLeft className="h-4 w-4" />
+              <span className="text-xs font-medium">Volver al feed</span>
             </Button>
+          </div>
+          
+          {/* Breadcrumb Navigation - Reddit style */}
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
             <span>/</span>
             {post.communities && (
               <>
-                <span className="font-medium text-blue-600 hover:underline cursor-pointer">
+                <span className="font-medium text-orange-500 hover:text-orange-600 hover:underline cursor-pointer">
                   r/{post.communities.slug}
                 </span>
                 <span>/</span>
@@ -369,29 +374,45 @@ export default function PostDetail() {
           </div>
 
           {/* Post Container - Reddit white card style */}
-          <div className="bg-white rounded-md border border-gray-300 overflow-hidden mb-4">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden mb-4">
             {/* Post Header */}
             <div className="px-4 pt-3 pb-2">
               <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
                 {post.communities && (
                   <>
-                    <span className="font-bold text-gray-900 hover:underline cursor-pointer">
+                    <span className="font-bold text-repsol-blue hover:text-orange-500 hover:underline cursor-pointer">
                       r/{post.communities.slug}
                     </span>
                     <span>•</span>
                   </>
                 )}
                 <span>Publicado por</span>
-                <span className="font-medium text-gray-700 hover:underline cursor-pointer">
+                <span className="font-medium text-repsol-blue hover:text-orange-500 hover:underline cursor-pointer">
                   u/{post.actor_type === 'user' ? post.profiles?.full_name?.replace(' ', '') : post.organizations?.name?.replace(' ', '')}
                 </span>
-                <span>hace {Math.floor((Date.now() - new Date(post.created_at).getTime()) / (1000 * 60 * 60))} horas</span>
+                <span>hace {(() => {
+                  const hours = Math.floor((Date.now() - new Date(post.created_at).getTime()) / (1000 * 60 * 60));
+                  if (hours >= 24) {
+                    const days = Math.floor(hours / 24);
+                    return `${days} ${days === 1 ? 'día' : 'días'}`;
+                  }
+                  return `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+                })()}</span>
               </div>
 
-              {/* Post Title */}
-              <h1 className="text-lg font-medium leading-snug text-gray-900 mb-3">
-                {post.content}
-              </h1>
+              {/* Post Title with special badge for tips */}
+              <div className="mb-3">
+                {post.content.toLowerCase().includes('tip del día') && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                      💡 Tip del día
+                    </div>
+                  </div>
+                )}
+                <h1 className="text-lg font-medium leading-snug text-gray-900">
+                  {post.content}
+                </h1>
+              </div>
 
               {/* Post Media */}
               {post.post_media && post.post_media.length > 0 && (
@@ -435,13 +456,13 @@ export default function PostDetail() {
                 </div>
 
                 {/* Comments Button */}
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-gray-500 hover:bg-gray-100 rounded-full">
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-full transition-colors">
                   <MessageCircle className="h-4 w-4 mr-1" />
                   {formatNumber(post.comments_count)}
                 </Button>
 
                 {/* Share Button */}
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-gray-500 hover:bg-gray-100 rounded-full">
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-full transition-colors">
                   <Share2 className="h-4 w-4 mr-1" />
                   Compartir
                 </Button>
@@ -455,21 +476,21 @@ export default function PostDetail() {
           </div>
 
           {/* Comments Section - Reddit style */}
-          <div className="bg-white rounded-md border border-gray-300 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
             {/* Sort Options - Clean Reddit style */}
             <div className="px-4 py-2 border-b border-gray-200 bg-white">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500 mr-2">Ordenar por:</span>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs font-medium text-blue-600 bg-blue-50 rounded-full">
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs font-medium text-orange-600 bg-orange-50 rounded-full border border-orange-200">
                   Mejores
                 </Button>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-gray-500 hover:bg-gray-100 rounded-full">
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-full transition-colors">
                   Nuevos
                 </Button>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-gray-500 hover:bg-gray-100 rounded-full">
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-full transition-colors">
                   Antiguos
                 </Button>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-gray-500 hover:bg-gray-100 rounded-full">
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-full transition-colors">
                   Conversación
                 </Button>
               </div>
@@ -482,12 +503,12 @@ export default function PostDetail() {
                   <div className="flex gap-2">
                     <Avatar className="h-7 w-7 shrink-0 mt-1">
                       <AvatarImage src={user.user_metadata?.avatar_url} />
-                      <AvatarFallback className="bg-blue-500 text-white text-xs">
+                      <AvatarFallback className="bg-repsol-blue text-white text-xs">
                         {user.email?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 focus-within:border-blue-300 focus-within:bg-white transition-colors">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 focus-within:border-orange-400 focus-within:bg-white transition-colors">
                         <Textarea
                           placeholder="Únete a la conversación..."
                           value={newComment}
@@ -507,7 +528,7 @@ export default function PostDetail() {
                             onClick={handleSubmitComment}
                             disabled={!newComment.trim() || submittingComment}
                             size="sm"
-                            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-3 py-1 h-7 text-xs font-medium"
+                            className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-3 py-1 h-7 text-xs font-medium shadow-sm"
                           >
                             {submittingComment ? 'Enviando...' : 'Comentar'}
                           </Button>
@@ -537,7 +558,7 @@ export default function PostDetail() {
                             <AvatarImage 
                               src={comment.actor_type === 'user' ? comment.profiles?.avatar_url : comment.organizations?.logo_url} 
                             />
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xs">
+                            <AvatarFallback className="bg-repsol-blue text-white text-xs">
                               {comment.actor_type === 'user' 
                                 ? comment.profiles?.full_name?.charAt(0).toUpperCase()
                                 : comment.organizations?.name?.charAt(0).toUpperCase()
@@ -555,7 +576,14 @@ export default function PostDetail() {
                               {comment.actor_type === 'user' ? comment.profiles?.full_name : comment.organizations?.name}
                             </span>
                             <span>•</span>
-                            <span>hace {Math.floor((Date.now() - new Date(comment.created_at).getTime()) / (1000 * 60 * 60))}h</span>
+                            <span>hace {(() => {
+                              const hours = Math.floor((Date.now() - new Date(comment.created_at).getTime()) / (1000 * 60 * 60));
+                              if (hours >= 24) {
+                                const days = Math.floor(hours / 24);
+                                return `${days}d`;
+                              }
+                              return `${hours}h`;
+                            })()}</span>
                           </div>
                           
                           {/* Comment Content - Better typography */}
@@ -598,16 +626,16 @@ export default function PostDetail() {
         <div className="w-80 shrink-0">
           {/* Community Info Card */}
           {post.communities && (
-            <div className="bg-white rounded-md border border-gray-300 overflow-hidden mb-4">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden mb-4">
               {/* Community Header */}
-              <div className="bg-blue-500 h-8"></div>
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 h-8"></div>
               <div className="p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-12 w-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="h-12 w-12 bg-repsol-blue rounded-full flex items-center justify-center text-white font-bold shadow-md">
                     r/
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">r/{post.communities.slug}</h3>
+                    <h3 className="font-bold text-lg text-repsol-blue">r/{post.communities.slug}</h3>
                     <p className="text-sm text-gray-500">{post.communities.name}</p>
                   </div>
                 </div>
@@ -618,11 +646,11 @@ export default function PostDetail() {
                 
                 <div className="flex gap-4 text-sm mb-4">
                   <div>
-                    <div className="font-bold text-gray-900">105k</div>
+                    <div className="font-bold text-orange-600">105k</div>
                     <div className="text-gray-500">Miembros</div>
                   </div>
                   <div>
-                    <div className="font-bold text-gray-900">40</div>
+                    <div className="font-bold text-orange-600">40</div>
                     <div className="text-gray-500">En línea</div>
                   </div>
                 </div>
@@ -631,8 +659,8 @@ export default function PostDetail() {
                   variant={myCommunities.some(mc => mc.id === post.community_id) ? "default" : "outline"}
                   className={`w-full mb-2 ${
                     myCommunities.some(mc => mc.id === post.community_id)
-                      ? "bg-blue-500 hover:bg-blue-600 text-white"
-                      : "border-blue-500 text-blue-500 hover:bg-blue-50"
+                      ? "bg-orange-500 hover:bg-orange-600 text-white shadow-md"
+                      : "border-orange-500 text-orange-500 hover:bg-orange-50"
                   }`}
                   onClick={handleJoinCommunity}
                 >
@@ -643,21 +671,24 @@ export default function PostDetail() {
           )}
 
           {/* Community Rules Card */}
-          <div className="bg-white rounded-md border border-gray-300 overflow-hidden mb-4">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden mb-4">
             <div className="p-4">
-              <h3 className="font-bold text-lg mb-4">Reglas de r/{post.communities?.slug}</h3>
+              <h3 className="font-bold text-lg mb-4 text-repsol-blue flex items-center gap-2">
+                <Hash className="h-5 w-5 text-orange-500" />
+                Reglas de r/{post.communities?.slug}
+              </h3>
               <div className="space-y-3 text-sm">
-                <div className="flex gap-3">
-                  <span className="text-gray-500">1.</span>
-                  <span>No toleramos la discriminación, la intolerancia o la apología de la violencia</span>
+                <div className="flex gap-3 p-2 rounded-lg hover:bg-orange-50/50 transition-colors">
+                  <span className="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                  <span className="text-gray-700">No toleramos la discriminación, la intolerancia o la apología de la violencia</span>
                 </div>
-                <div className="flex gap-3">
-                  <span className="text-gray-500">2.</span>
-                  <span>No hagas preguntas que no tienen que ver con el subreddit o trolling/spam</span>
+                <div className="flex gap-3 p-2 rounded-lg hover:bg-orange-50/50 transition-colors">
+                  <span className="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                  <span className="text-gray-700">No hagas preguntas que no tienen que ver con el subreddit o trolling/spam</span>
                 </div>
-                <div className="flex gap-3">
-                  <span className="text-gray-500">3.</span>
-                  <span>No repitas preguntas recientes o haz preguntas que deberían ir en el hilo diario</span>
+                <div className="flex gap-3 p-2 rounded-lg hover:bg-orange-50/50 transition-colors">
+                  <span className="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                  <span className="text-gray-700">No repitas preguntas recientes o haz preguntas que deberían ir en el hilo diario</span>
                 </div>
               </div>
             </div>

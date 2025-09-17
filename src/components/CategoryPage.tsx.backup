@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { useNavigationTransition, pageTransitionVariants } from "@/hooks/useNavigationTransition";
 import { useAnunciosSimple, type Anuncio } from "@/hooks/useAnunciosSimple";
 import { AnuncioCard } from "./AnuncioCard";
 import { CategoryFilters } from "./CategoryFilters";
@@ -8,20 +6,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Package } from "lucide-react";
 
-// ✅ FIXED: Interface that matches contratarConfig structure
-interface RawCategoryConfig {
-  priceRanges: Array<{ id: string; label: string; test?: (price: number) => boolean }>;
-  conditionOptions: string[];
-  subcategories: string[];
-}
-
 interface CategoryPageProps {
   categoryName: string;
   categoryKey: string;
   title: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
-  config: RawCategoryConfig;
+  config: {
+    priceRanges: Array<{ id: string; label: string; test?: (price: number) => boolean }>;
+    locations: Array<{ id: string; label: string }>;
+    conditions: Array<{ id: string; label: string }>;
+    types: Array<{ id: string; label: string }>;
+    subcategories: Array<{ id: string; label: string }>;
+  };
   getTypeColor: (tipo: string) => string;
   getTypeLabel: (tipo: string) => string;
   getConditionColor: (estado: string) => string;
@@ -34,40 +31,12 @@ export function CategoryPage({
   title,
   description,
   icon: IconComponent,
-  config: rawConfig,
+  config,
   getTypeColor,
   getTypeLabel,
   getConditionColor,
   matchesUnifiedType = () => true
 }: CategoryPageProps) {
-  // Initialize navigation transition (even if not used, keeps consistency)
-  const { navigateWithDelay } = useNavigationTransition();
-  
-  // ✅ FIXED: Transform raw config to expected format with safe defaults
-  const config = {
-    priceRanges: rawConfig?.priceRanges || [],
-    locations: [
-      { id: 'madrid', label: 'Madrid' },
-      { id: 'barcelona', label: 'Barcelona' },
-      { id: 'valencia', label: 'Valencia' },
-      { id: 'sevilla', label: 'Sevilla' },
-      { id: 'bilbao', label: 'Bilbao' },
-    ],
-    conditions: (rawConfig?.conditionOptions || []).map(condition => ({
-      id: condition.toLowerCase().replace(/\s+/g, '_'),
-      label: condition
-    })),
-    types: [
-      { id: 'venta', label: 'Venta' },
-      { id: 'compra', label: 'Compra' },
-      { id: 'alquiler', label: 'Alquiler' },
-    ],
-    subcategories: (rawConfig?.subcategories || []).map(sub => ({
-      id: sub.toLowerCase().replace(/\s+/g, '_'),
-      label: sub
-    }))
-  };
-
   // Filters state
   const [priceFilter, setPriceFilter] = useState("todos");
   const [locationFilter, setLocationFilter] = useState("todos");
@@ -121,18 +90,12 @@ export function CategoryPage({
   };
 
   return (
-    <motion.main 
-      className="flex-1 p-6"
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={pageTransitionVariants}
-    >
+    <main className="flex-1 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <IconComponent className="h-8 w-8 text-repsol-orange" />
+            <IconComponent className="h-8 w-8 text-blue-600" />
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
               <p className="text-gray-600 mt-1">{description}</p>
@@ -246,6 +209,6 @@ export function CategoryPage({
           </>
         )}
       </div>
-    </motion.main>
+    </main>
   );
 }

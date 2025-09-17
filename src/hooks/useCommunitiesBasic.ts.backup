@@ -1,0 +1,108 @@
+/**
+ * SUPER SIMPLE APPROACH: Just fetch when needed, no complicated logic
+ */
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
+
+export interface CommunityRow {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  hashtag?: string | null;
+  is_public: boolean;
+  avatar_url?: string | null;
+  member_count?: number | null;
+  banner_url?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  joined_at?: string | null;
+}
+
+export function useCommunitiesBasic(user?: any, authLoading?: boolean) {
+  // Use passed user or fallback to useAuth (for backward compatibility)
+  const authHook = useAuth();
+  const currentUser = user !== undefined ? user : authHook.user;
+  const currentAuthLoading = authLoading !== undefined ? authLoading : authHook.loading;
+  const [communities, setCommunities] = useState<CommunityRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Simple fetch function
+  const fetchCommunities = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (currentAuthLoading) {
+        setLoading(false);
+        return;
+      }
+      
+      if (!currentUser) {
+        setCommunities([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get user's communities in one query with join
+      const { data, error } = await supabase
+        .from('community_members')
+        .select(`
+          created_at,
+          communities!inner (
+            id,
+            slug,
+            name,
+            description,
+            hashtag,
+            is_public,
+            avatar_url,
+            member_count,
+            banner_url,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('user_id', currentUser.id);
+
+      if (error) {
+        setError(error.message);
+        setCommunities([]);
+        setLoading(false);
+        return;
+      }
+
+      // Transform data
+      const transformedCommunities = (data || []).map(item => ({
+        ...item.communities,
+        joined_at: item.created_at
+      }));
+
+      setCommunities(transformedCommunities);
+      setLoading(false);
+
+    } catch (err: any) {
+      setError(err.message);
+      setCommunities([]);
+      setLoading(false);
+    }
+  };
+
+  // Fetch when auth is ready and user changes
+  useEffect(() => {
+    if (!currentAuthLoading) {
+      fetchCommunities();
+    }
+  }, [currentAuthLoading, currentUser?.id]); // Depend on both auth loading and user ID
+
+  return {
+    myCommunities: communities,
+    allCommunities: [], // Not needed for now
+    loading,
+    error,
+    refresh: fetchCommunities
+  };
+}

@@ -16,15 +16,15 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 26% 14%;
 
-    /* Primary - Deep professional blue */
-    --primary: 217 91% 25%;
+    /* Primary - Repsol Orange (Naranja energético) */
+    --primary: 24 100% 50%;
     --primary-foreground: 0 0% 98%;
-    --primary-hover: 217 91% 20%;
+    --primary-hover: 24 100% 45%;
 
-    /* Secondary - Warm hospitality gold */
-    --secondary: 45 93% 58%;
-    --secondary-foreground: 220 26% 14%;
-    --secondary-hover: 45 93% 52%;
+    /* Secondary - Guía Repsol Blue (Azul corporativo #001E37) */
+    --secondary: 207 100% 11%;
+    --secondary-foreground: 0 0% 98%;
+    --secondary-hover: 207 100% 8%;
 
     /* Muted tones for subtle elements */
     --muted: 210 40% 96%;
@@ -41,10 +41,10 @@
     --input: 214 32% 91%;
     --ring: 217 91% 25%;
 
-    /* Professional gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 25%), hsl(217 91% 35%));
-    --gradient-secondary: linear-gradient(135deg, hsl(45 93% 58%), hsl(45 93% 65%));
-    --gradient-hero: linear-gradient(135deg, hsl(217 91% 25%), hsl(180 84% 45%));
+    /* Repsol gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(24 100% 50%), hsl(24 100% 60%));
+    --gradient-secondary: linear-gradient(135deg, hsl(210 100% 20%), hsl(210 100% 30%));
+    --gradient-hero: linear-gradient(135deg, hsl(210 100% 20%), hsl(24 100% 50%));
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 40% 98%));
 
     /* Professional shadows */
@@ -125,5 +125,31 @@
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-light;
+  }
+  
+  /* Repsol typography weights */
+  .font-repsol-light {
+    font-weight: 300;
+  }
+  
+  .font-repsol-normal {
+    font-weight: 400;
+  }
+  
+  .font-repsol-medium {
+    font-weight: 500;
+  }
+  
+  /* Repsol brand colors */
+  .text-repsol-blue {
+    color: #001E37;
+  }
+  
+  .bg-repsol-blue {
+    background-color: #001E37;
+  }
+  
+  .border-repsol-blue {
+    border-color: #001E37;
   }
 }
