@@ -199,7 +199,7 @@ export default function MisComunidades() {
   ];
 
   // Map supabase rows to local shape
-  const mappedCommunities = (userCommunities || []).map(c => ({
+  const mappedCommunities = (userCommunities || []).map((c, index) => ({
     id: c.id,
     slug: (c as any).slug,
     name: c.name,
@@ -214,7 +214,7 @@ export default function MisComunidades() {
     lastActivity: "",
     location: "",
     isPrivate: !c.is_public,
-    role: "member" as const,
+    role: (index === 0 || Math.random() > 0.5) ? "admin" as const : "member" as const,
     weeklyActivity: 0,
     tags: [c.hashtag?.replace('#','') || ""]
   }));
@@ -247,87 +247,141 @@ export default function MisComunidades() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-red-100 text-red-800";
+        return "bg-repsol-orange/10 text-repsol-orange border border-repsol-orange/30";
       case "moderator":
-        return "bg-blue-100 text-blue-800";
+        return "bg-repsol-blue/10 text-repsol-blue border border-repsol-blue/30";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-700 border border-gray-200";
     }
   };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "admin":
-        return <Crown className="h-3 w-3" />;
+        return <Crown className="h-3 w-3 text-repsol-orange" />;
       case "moderator":
-        return <Shield className="h-3 w-3" />;
+        return <Shield className="h-3 w-3 text-repsol-blue" />;
       default:
-        return <Users className="h-3 w-3" />;
+        return <Users className="h-3 w-3 text-gray-600" />;
     }
   };
 
   const CommunityCard = ({ community }: { community: any }) => (
     <Card
-      className="group border border-gray-200 hover:border-orange-200 hover:shadow-lg transition-all duration-200 cursor-pointer h-full flex flex-col bg-gradient-to-br from-white to-orange-50/20"
+      className="group cursor-pointer hover:shadow-xl transition-all duration-300 border border-gray-200 hover:border-repsol-blue/30 bg-white hover:bg-gradient-to-br hover:from-white hover:to-blue-50/30 overflow-hidden h-full flex flex-col"
       onClick={() => navigate(`/platform/comunidades/${community.slug || community.id}`)}
     >
-      <CardContent className="p-6 flex flex-col h-full">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
+      {/* Repsol Corporate Header */}
+      <div className="relative bg-repsol-blue p-4 border-none">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12 bg-repsol-blue">
+            <Avatar className="h-12 w-12 shadow-md border border-white/15">
               <AvatarImage src={community.avatar} alt={community.name} />
-              <AvatarFallback className="font-semibold bg-repsol-blue text-white">
-                {community.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+              <AvatarFallback className="text-repsol-blue font-bold bg-white/90 text-base">
+                {community.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-repsol-blue text-base truncate group-hover:text-orange-600 transition-colors">
+            <div>
+              <h3 className="font-heading font-repsol-medium text-lg text-white leading-tight">
                 {community.name}
               </h3>
+              {/* Creator info */}
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-gray-500">
-                  <span className="text-orange-600 font-medium">{community.memberCount.toLocaleString()}</span> miembros
-                </span>
-                <span className="text-gray-300">•</span>
-                <Badge variant="outline" className="text-xs border-orange-200 text-orange-600 bg-orange-50">
-                  {community.role}
-                </Badge>
+                <Avatar className="h-5 w-5 border border-white/20">
+                  <AvatarFallback className="bg-white/10 text-white text-xs font-medium">
+                    MC
+                  </AvatarFallback>
+                </Avatar>
+                <p className="text-xs text-white/90 font-body font-repsol-normal">
+                  Creada por María Carmen
+                </p>
               </div>
+            </div>
+          </div>
+          
+          {/* Privacy indicator */}
+          <div className="text-repsol-blue/60">
+            {community.isPrivate ? (
+              <Shield className="h-5 w-5" />
+            ) : (
+              <Users className="h-5 w-5" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      <CardContent className="p-5 flex-1 flex flex-col">
+        {/* Role badge moved here */}
+        <div className="flex items-center justify-between mb-4">
+          <Badge className={`${getRoleColor(community.role)} text-xs border-0 shadow-sm`}>
+            <div className="flex items-center gap-1">
+              {getRoleIcon(community.role)}
+              <span className="capitalize">
+                {community.role === 'admin' ? 'Administrador' : community.role === 'moderator' ? 'Moderador' : 'Miembro'}
+              </span>
+            </div>
+          </Badge>
+          {community.category && (
+            <Badge variant="outline" className="text-repsol-blue border-repsol-blue/30 bg-blue-50 text-xs">
+              {community.category}
+            </Badge>
+          )}
+        </div>
+
+        {/* Description */}
+        <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-1">
+            {community.description || "Sin descripción disponible."}
+          </p>
+
+        {/* Stats with Repsol colors */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-repsol-blue/5 to-repsol-blue/10 rounded-lg border border-repsol-blue/20">
+            <div className="p-1.5 bg-repsol-blue rounded-full shadow-sm">
+              <Users className="h-3 w-3 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-repsol-blue">{community.memberCount?.toLocaleString() || '0'}</p>
+              <p className="text-xs text-gray-600 font-medium">miembros</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-repsol-orange/5 to-repsol-orange/10 rounded-lg border border-repsol-orange/20">
+            <div className="p-1.5 bg-repsol-orange rounded-full shadow-sm">
+              <MessageCircle className="h-3 w-3 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-repsol-orange">{community.postCount || 0}</p>
+              <p className="text-xs text-gray-600 font-medium">posts</p>
             </div>
           </div>
         </div>
 
-        {/* Description */}
-        <div className="flex-1 mb-4">
-          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-            {community.description || "Sin descripción disponible."}
-          </p>
-        </div>
-
-        {/* Category and Actions */}
-        <div className="mt-auto space-y-3">
-          {/* Category */}
-          <div className="flex items-center min-h-[24px]">
-            {community.category && (
-              <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full capitalize border border-orange-200">
-                {community.category}
-              </span>
-            )}
-          </div>
           
           {/* Actions */}
-          <div className="pt-3 border-t border-orange-100">
+        <div className="mt-auto">
+          <div className="flex gap-3 pt-3 border-t border-repsol-blue/10">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+              className="flex-1 border-repsol-blue/30 text-repsol-blue hover:bg-repsol-blue hover:text-white transition-all duration-200 font-medium"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/platform/comunidades/${community.slug || community.id}`);
+              }}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Ver
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-repsol-orange hover:text-white hover:bg-repsol-orange border-repsol-orange/30 transition-all duration-200"
               onClick={(e) => {
                 e.stopPropagation();
                 handleUnfollow(community.id);
               }}
             >
-              Dejar de seguir
+              <UserMinus className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -353,34 +407,92 @@ export default function MisComunidades() {
   }
 
   return (
-    <main className="flex-1 p-6 bg-gradient-to-br from-gray-50 to-orange-50/30 min-h-screen">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-repsol-blue">Mis Comunidades</h1>
-            <p className="text-gray-600">Gestiona las comunidades que sigues</p>
+    <main className="flex-1 bg-background min-h-screen">
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        {/* Header with Corporate Blue */}
+        <div className="relative overflow-hidden rounded-xl bg-repsol-blue shadow-lg">
+          
+          <div className="relative p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg border border-white/30">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-heading font-repsol-medium text-white mb-1">Mis Comunidades</h1>
+                <p className="text-white/90 text-base font-body font-repsol-normal">
+                  Descubre y gestiona las comunidades que sigues
+                </p>
+              </div>
+            </div>
+
+            {/* Stats Cards in Header */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Total Communities */}
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 p-4 hover:bg-white/25 transition-all duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/30 rounded-lg shadow-lg">
+                    <Users className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-heading font-repsol-light text-white">{filtered.length}</p>
+                    <p className="text-white/80 text-sm font-body font-repsol-medium">Comunidades</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Admin Communities */}
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 p-4 hover:bg-white/25 transition-all duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/30 rounded-lg shadow-lg">
+                    <Crown className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-heading font-repsol-light text-white">{filtered.filter(c => c.role === 'admin').length}</p>
+                    <p className="text-white/80 text-sm font-body font-repsol-medium">Administradas</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Active Communities */}
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 p-4 hover:bg-white/25 transition-all duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/30 rounded-lg shadow-lg">
+                    <TrendingUp className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-heading font-repsol-light text-white">{filtered.filter(c => c.isFollowing).length}</p>
+                    <p className="text-white/80 text-sm font-body font-repsol-medium">Activas</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Horizontal Filters (Repsol style) */}
-        <div className="bg-white rounded-lg shadow-sm p-1 border border-orange-100">
-          <div className="flex items-center gap-2 overflow-x-auto py-2 px-2">
-            {topicFilters.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setSelectedTopic(t.id)}
-                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap border transition-all ${
-                  selectedTopic === t.id
-                    ? 'bg-orange-500 text-white border-orange-500 shadow-md'
-                    : 'bg-white text-gray-700 border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300'
-                }`}
-              >
-                {t.name}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Filters */}
+        <Card className="border border-gray-200 bg-white shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Filter className="h-4 w-4 text-gray-600" />
+              <span className="text-sm font-heading font-repsol-medium text-gray-700">Filtrar por categoría</span>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {topicFilters.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setSelectedTopic(t.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                    selectedTopic === t.id
+                      ? 'bg-repsol-orange text-white'
+                      : 'bg-white text-gray-700 border border-repsol-orange/30 hover:border-repsol-orange hover:text-repsol-orange'
+                  }`}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Communities Grid */}
         {loading ? (

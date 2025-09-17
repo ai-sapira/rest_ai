@@ -347,6 +347,7 @@ export default function Platform() {
       {/* Navbar at the top - FULL WIDTH */}
       <PlatformNavbar 
         onCreatePost={handleCreatePost}
+        onCreateCommunity={handleCreateCommunity}
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />

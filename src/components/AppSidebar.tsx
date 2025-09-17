@@ -21,13 +21,10 @@ import {
   Truck,
   UserCheck,
   Network,
-  Bookmark,
   ClipboardList,
   Home,
   Compass,
   Plus,
-  Star,
-  Eye,
   Hash
 } from "lucide-react";
 
@@ -42,10 +39,6 @@ const communityItems = [
   { title: "Mis Comunidades", url: "/platform/mis-comunidades", icon: Hash },
 ];
 
-const forYouItems = [
-  { title: "Recientes", url: "/platform/recientes", icon: Eye, disabled: true },
-  { title: "Tus Threads", url: "/platform/mis-threads", icon: Bookmark },
-];
 
 const searchItems = [
   { title: "Buscar", icon: Search, url: "/platform/buscar" },
@@ -95,7 +88,6 @@ export function AppSidebar({ onCreateCommunity }: AppSidebarProps = {}) {
       console.log('No action taken for item:', item);
     }
   };
-  const [forYouOpen, setForYouOpen] = useState(true);
   const [contractOpen, setContractOpen] = useState(true);
 
   const isActive = (path: string) => currentPath === path;
@@ -176,46 +168,6 @@ export function AppSidebar({ onCreateCommunity }: AppSidebarProps = {}) {
           )}
         </div>
 
-        {/* For You Section */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-900 px-2">Para ti</span>
-            <button 
-              onClick={() => setForYouOpen(!forYouOpen)}
-              className="p-1 hover:bg-gray-100 rounded"
-            >
-              <ChevronDown className={`h-4 w-4 transition-transform ${forYouOpen ? 'rotate-180' : ''}`} />
-            </button>
-          </div>
-          {forYouOpen && (
-            <div className="ml-2 space-y-1">
-              {forYouItems.map((item) => (
-                item.disabled ? (
-                  <div key={item.title} className="flex items-center gap-2 p-2 rounded-md w-full text-left text-sm text-gray-700 hover:bg-gray-100 cursor-default">
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </div>
-                ) : (
-                  <NavLink
-                    key={item.title}
-                    to={item.url}
-                    className={({ isActive }) => `flex items-center gap-2 p-2 rounded-md w-full text-left text-sm transition-colors ${
-                      isActive 
-                        ? "bg-orange-50 text-orange-700 font-medium border-r-2 border-orange-500" 
-                        : "text-gray-700 hover:bg-orange-50/50 hover:text-orange-600"
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </NavLink>
-                )
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Separator */}
-        <div className="border-t border-gray-200"></div>
 
         {/* Contract Section */}
         <div className="space-y-1">

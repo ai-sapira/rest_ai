@@ -3,15 +3,19 @@ import {
   Bell, 
   User, 
   Settings, 
-  PlusCircle, 
   Clock, 
   TrendingUp, 
   MapPin, 
   Users, 
   LogOut, 
-  MessageCircle 
+  MessageCircle,
+  CheckCircle,
+  Heart,
+  MessageSquare,
+  UserPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CreateButton } from "@/components/CreateButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,13 +28,63 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
+// Mock notifications data
+const mockNotifications = [
+  {
+    id: 1,
+    type: 'like',
+    icon: Heart,
+    title: 'Nuevo me gusta',
+    message: 'A María García le gustó tu publicación sobre "Equipos de cocina"',
+    time: '2m',
+    unread: true
+  },
+  {
+    id: 2,
+    type: 'comment',
+    icon: MessageSquare,
+    title: 'Nuevo comentario',
+    message: 'Juan Pérez comentó en tu anuncio de "Freidora industrial"',
+    time: '15m',
+    unread: true
+  },
+  {
+    id: 3,
+    type: 'follow',
+    icon: UserPlus,
+    title: 'Nuevo seguidor',
+    message: 'Ana López ahora te sigue',
+    time: '1h',
+    unread: true
+  },
+  {
+    id: 4,
+    type: 'transaction',
+    icon: CheckCircle,
+    title: 'Transacción completada',
+    message: 'Se completó la venta de "Mesa de acero inoxidable"',
+    time: '2h',
+    unread: false
+  },
+  {
+    id: 5,
+    type: 'message',
+    icon: MessageCircle,
+    title: 'Nuevo mensaje',
+    message: 'Tienes un mensaje de Carlos Ruiz sobre tu servicio de catering',
+    time: '3h',
+    unread: false
+  }
+];
+
 interface PlatformNavbarProps {
   onCreatePost?: () => void;
+  onCreateCommunity?: () => void;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
 }
 
-export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabChange }: PlatformNavbarProps) {
+export function PlatformNavbar({ onCreatePost, onCreateCommunity, activeTab = "recientes", onTabChange }: PlatformNavbarProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
@@ -228,67 +282,121 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
           </div>
 
           {/* Right Section - Actions */}
-          <div className="flex items-center gap-2 w-64 flex-shrink-0 justify-end pr-4">
-            {/* Create Button - Dynamic text - Hidden on profile page */}
+          <div className="flex items-center gap-4 w-80 flex-shrink-0 justify-end pr-6">
+            {/* Create Button with Dropdown - Hidden on profile page */}
             {!shouldHideCreateButton && (
-              <Button
-                onClick={onCreatePost}
-                className="bg-repsol-blue hover:bg-repsol-blue/90 text-white px-4 py-2 h-9 transition-colors shadow-md"
-                aria-label={`${createButtonText} - Abre formulario de creación`}
-              >
-                <PlusCircle className="h-4 w-4 mr-2" aria-hidden="true" />
-                {createButtonText}
-              </Button>
+              <CreateButton
+                onCreatePost={onCreatePost}
+                onCreateCommunity={onCreateCommunity}
+              />
             )}
 
-            {/* Mis Mensajes */}
-            <Button 
-              variant="ghost" 
-              className="h-9 w-9 rounded-full p-0 hover:bg-gray-100 transition-colors"
-              onClick={handleMessagesClick}
-              aria-label="Mis Mensajes"
-            >
-              <MessageCircle className="h-4 w-4 text-gray-600" aria-hidden="true" />
-            </Button>
+            {/* Action buttons group with more spacing */}
+            <div className="flex items-center gap-3">
+              {/* Mis Mensajes */}
+              <Button 
+                variant="ghost" 
+                className="h-9 w-9 rounded-full p-0 hover:bg-gray-100 transition-colors"
+                onClick={handleMessagesClick}
+                aria-label="Mis Mensajes"
+              >
+                <MessageCircle className="h-4 w-4 text-gray-600" aria-hidden="true" />
+              </Button>
 
-            {/* Mi Red */}
-            <Button 
-              variant="ghost" 
-              className="h-9 w-9 rounded-full p-0 hover:bg-gray-100 transition-colors"
-              onClick={handleNetworkClick}
-              aria-label="Mi Red"
-            >
-              <Users className="h-4 w-4 text-gray-600" aria-hidden="true" />
-            </Button>
+              {/* Mi Red */}
+              <Button 
+                variant="ghost" 
+                className="h-9 w-9 rounded-full p-0 hover:bg-gray-100 transition-colors"
+                onClick={handleNetworkClick}
+                aria-label="Mi Red"
+              >
+                <Users className="h-4 w-4 text-gray-600" aria-hidden="true" />
+              </Button>
 
-            {/* Notifications */}
-            <Button 
-              variant="ghost" 
-              className="h-9 w-9 rounded-full p-0 hover:bg-gray-100 relative transition-colors"
-              aria-label="Notificaciones - 3 nuevas"
-            >
-              <Bell className="h-4 w-4 text-gray-600" aria-hidden="true" />
-              <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                3
-              </span>
-            </Button>
+              {/* Notifications */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    className="h-9 w-9 rounded-full p-0 hover:bg-gray-100 relative transition-colors"
+                    aria-label="Notificaciones - 3 nuevas"
+                  >
+                    <Bell className="h-4 w-4 text-gray-600" aria-hidden="true" />
+                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-repsol-orange text-white text-xs rounded-full flex items-center justify-center">
+                      {mockNotifications.filter(n => n.unread).length}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 p-0">
+                <div className="p-4 border-b bg-gradient-to-r from-repsol-blue to-repsol-blue/95">
+                  <h3 className="font-semibold text-white">Notificaciones</h3>
+                  <p className="text-sm text-white/80 mt-1">
+                    Tienes {mockNotifications.filter(n => n.unread).length} notificaciones sin leer
+                  </p>
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {mockNotifications.map((notification) => {
+                    const IconComponent = notification.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={notification.id}
+                        className={`flex items-start gap-3 p-4 cursor-pointer hover:bg-repsol-orange/5 ${
+                          notification.unread ? 'bg-repsol-orange/10 border-l-2 border-l-repsol-orange' : ''
+                        }`}
+                      >
+                        <div className={`mt-1 p-2 rounded-full ${
+                          notification.type === 'like' ? 'bg-repsol-orange/20 text-repsol-orange' :
+                          notification.type === 'comment' ? 'bg-repsol-blue/20 text-repsol-blue' :
+                          notification.type === 'follow' ? 'bg-repsol-orange/20 text-repsol-orange' :
+                          notification.type === 'transaction' ? 'bg-repsol-blue/20 text-repsol-blue' :
+                          'bg-repsol-blue/20 text-repsol-blue'
+                        }`}>
+                          <IconComponent className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-repsol-blue truncate">
+                              {notification.title}
+                            </p>
+                            <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                              {notification.time}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                            {notification.message}
+                          </p>
+                          {notification.unread && (
+                            <div className="w-2 h-2 bg-repsol-orange rounded-full mt-2"></div>
+                          )}
+                        </div>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </div>
+                <div className="p-4 border-t bg-repsol-blue/5">
+                  <button className="text-sm text-repsol-blue hover:text-repsol-orange font-medium transition-colors">
+                    Ver todas las notificaciones
+                  </button>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  className="h-9 w-9 rounded-full p-0 hover:bg-gray-100 transition-colors"
-                  aria-label={`Menú de usuario - ${profile?.full_name || 'Usuario'}`}
-                >
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={profile?.avatar_url} alt={profile?.full_name || 'Usuario'} />
-                    <AvatarFallback className="bg-repsol-blue text-white text-xs">
-                      {profile?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    className="h-9 w-9 rounded-full p-0 hover:bg-gray-100 transition-colors"
+                    aria-label={`Menú de usuario - ${profile?.full_name || 'Usuario'}`}
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url} alt={profile?.full_name || 'Usuario'} />
+                      <AvatarFallback className="bg-repsol-blue text-white text-xs">
+                        {profile?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
               <DropdownMenuContent 
                 className="w-48 bg-white border border-gray-200 shadow-lg rounded-md" 
                 align="end"
@@ -319,7 +427,8 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
                   <span className="text-sm">Cerrar Sesión</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </header>
@@ -369,7 +478,7 @@ export function PlatformNavbar({ onCreatePost, activeTab = "recientes", onTabCha
               </div>
             </div>
           </div>
-          <div className="w-64"></div>
+          <div className="w-80"></div>
         </div>
       )}
     </>

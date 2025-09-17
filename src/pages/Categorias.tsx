@@ -1,25 +1,13 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { useNavigationTransition, pageTransitionVariants, cardVariants } from "@/hooks/useNavigationTransition";
+import { useAnunciosSimple } from "@/hooks/useAnunciosSimple";
+import { AnuncioCard } from "@/components/AnuncioCard";
+import { CategoryFilters } from "@/components/CategoryFilters";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search,
   MapPin,
@@ -45,589 +33,73 @@ import {
   X
 } from "lucide-react";
 
-interface Announcement {
-  id: string;
-  title: string;
-  category: string;
-  type: "vendo" | "busco" | "oferta";
-  description: string;
-  price?: string;
-  location: string;
-  distance: number;
-  urgency: "alta" | "media" | "baja";
-  user: {
-    name: string;
-    restaurant: string;
-    avatar: string;
-    isInNetwork: boolean;
-    rating: number;
-  };
-  createdAt: string;
-  views: number;
-  responses: number;
-  status: "activo" | "pausado" | "finalizado";
-}
-
-interface CategorySummary {
+// Category configurations matching the sidebar structure
+interface CategoryConfig {
+  key: string;
   name: string;
   icon: any;
-  totalAnnouncements: number;
-  urgentCount: number;
-  averagePrice: string;
-  topLocation: string;
-  recentActivity: string;
   color: string;
+  gradient: string;
+  description: string;
 }
 
-const mockAnnouncements: Announcement[] = [
-  // Maquinaria
+// Categories configuration matching the sidebar structure
+const categories: CategoryConfig[] = [
   {
-    id: "1",
-    title: "Horno Industrial Rational - Excelente estado",
-    category: "Maquinaria",
-    type: "vendo",
-    description: "Horno combi steam Rational SelfCookingCenter, 5 años de uso, mantenimiento al día.",
-    price: "€8,500",
-    location: "Madrid",
-    distance: 2.3,
-    urgency: "media",
-    user: {
-      name: "Carlos Martín",
-      restaurant: "Asador El Roble",
-      avatar: "/avatars/carlos.jpg",
-      isInNetwork: true,
-      rating: 4.8
-    },
-    createdAt: "hace 2 días",
-    views: 156,
-    responses: 12,
-    status: "activo"
-  },
-  {
-    id: "7",
-    title: "Freidora industrial BERTO - Como nueva",
-    category: "Maquinaria",
-    type: "vendo",
-    description: "Freidora de 40 litros, apenas usada. Perfecto estado, con filtrado automático.",
-    price: "€3,200",
-    location: "Barcelona",
-    distance: 8.1,
-    urgency: "baja",
-    user: {
-      name: "Miguel Torres",
-      restaurant: "Tapas del Mar",
-      avatar: "/avatars/miguel.jpg",
-      isInNetwork: false,
-      rating: 4.6
-    },
-    createdAt: "hace 4 días",
-    views: 89,
-    responses: 5,
-    status: "activo"
-  },
-  {
-    id: "8",
-    title: "Plancha industrial 80cm - Urgente",
-    category: "Maquinaria",
-    type: "vendo",
-    description: "Plancha de acero inoxidable, 80cm. Cierre de local, debe irse esta semana.",
-    price: "€1,800",
-    location: "Valencia",
-    distance: 12.5,
-    urgency: "alta",
-    user: {
-      name: "Laura Jiménez",
-      restaurant: "Grill Express",
-      avatar: "/avatars/laura.jpg",
-      isInNetwork: true,
-      rating: 4.7
-    },
-    createdAt: "hace 1 día",
-    views: 234,
-    responses: 18,
-    status: "activo"
-  },
-  {
-    id: "9",
-    title: "Lavavajillas industrial Hobart",
-    category: "Maquinaria",
-    type: "vendo",
-    description: "Lavavajillas de paso, muy poco uso. Incluye kit de instalación.",
-    price: "€4,500",
-    location: "Sevilla",
-    distance: 6.8,
-    urgency: "media",
-    user: {
-      name: "Antonio Ruiz",
-      restaurant: "Casa Antonio",
-      avatar: "/avatars/antonio.jpg",
-      isInNetwork: true,
-      rating: 4.9
-    },
-    createdAt: "hace 3 días",
-    views: 112,
-    responses: 8,
-    status: "activo"
-  },
-
-  // Personal
-  {
-    id: "2",
-    title: "URGENTE: Chef especializado en cocina japonesa",
-    category: "Personal",
-    type: "busco",
-    description: "Para cubrir puesto permanente en restaurante japonés en centro de Madrid. Experiencia mínima 3 años.",
-    location: "Madrid Centro",
-    distance: 1.2,
-    urgency: "alta",
-    user: {
-      name: "Ana Takeshi",
-      restaurant: "Sakura Sushi",
-      avatar: "/avatars/ana.jpg",
-      isInNetwork: false,
-      rating: 4.9
-    },
-    createdAt: "hace 1 día",
-    views: 234,
-    responses: 18,
-    status: "activo"
-  },
-  {
-    id: "10",
-    title: "Camarero/a con experiencia - Tiempo parcial",
-    category: "Personal",
-    type: "busco",
-    description: "Buscamos camarero/a para fines de semana. Ambiente familiar, buen ambiente.",
-    location: "Barcelona",
-    distance: 4.2,
-    urgency: "media",
-    user: {
-      name: "Carmen López",
-      restaurant: "Bistró Carmen",
-      avatar: "/avatars/carmen.jpg",
-      isInNetwork: true,
-      rating: 4.5
-    },
-    createdAt: "hace 2 días",
-    views: 156,
-    responses: 14,
-    status: "activo"
-  },
-  {
-    id: "11",
-    title: "Cocinero para pizzería - Incorporación inmediata",
-    category: "Personal",
-    type: "busco",
-    description: "Experiencia en masas y horno de leña. Contrato indefinido desde el primer día.",
-    location: "Valencia",
-    distance: 7.3,
-    urgency: "alta",
-    user: {
-      name: "Giuseppe Rossi",
-      restaurant: "Pizzeria Napoli",
-      avatar: "/avatars/giuseppe.jpg",
-      isInNetwork: false,
-      rating: 4.8
-    },
-    createdAt: "hace 1 día",
-    views: 189,
-    responses: 22,
-    status: "activo"
-  },
-  {
-    id: "12",
-    title: "Ayudante de cocina - Formación incluida",
-    category: "Personal",
-    type: "busco",
-    description: "No se requiere experiencia previa. Ofrecemos formación completa y crecimiento profesional.",
-    location: "Madrid",
-    distance: 3.1,
-    urgency: "baja",
-    user: {
-      name: "Francisco Martín",
-      restaurant: "El Rincón Gastronómico",
-      avatar: "/avatars/francisco.jpg",
-      isInNetwork: true,
-      rating: 4.6
-    },
-    createdAt: "hace 5 días",
-    views: 98,
-    responses: 11,
-    status: "activo"
-  },
-
-  // Mobiliario
-  {
-    id: "3",
-    title: "Mesas y sillas para terraza - Lote completo",
-    category: "Mobiliario",
-    type: "vendo",
-    description: "30 mesas y 120 sillas de terraza, resistentes al clima. Perfecto estado.",
-    price: "€2,400",
-    location: "Valencia",
-    distance: 15.6,
-    urgency: "baja",
-    user: {
-      name: "Roberto Silva",
-      restaurant: "La Terraza del Mar",
-      avatar: "/avatars/roberto.jpg",
-      isInNetwork: true,
-      rating: 4.6
-    },
-    createdAt: "hace 5 días",
-    views: 89,
-    responses: 7,
-    status: "activo"
-  },
-  {
-    id: "13",
-    title: "Bancos de madera rústicos - 20 unidades",
-    category: "Mobiliario",
-    type: "vendo",
-    description: "Bancos artesanales de madera maciza. Perfectos para ambiente rural o terraza.",
-    price: "€800",
-    location: "Sevilla",
-    distance: 9.4,
-    urgency: "media",
-    user: {
-      name: "José María Pérez",
-      restaurant: "El Cortijo",
-      avatar: "/avatars/josemaria.jpg",
-      isInNetwork: false,
-      rating: 4.4
-    },
-    createdAt: "hace 3 días",
-    views: 67,
-    responses: 4,
-    status: "activo"
-  },
-  {
-    id: "14",
-    title: "Barra de bar completa con taburetes",
-    category: "Mobiliario",
-    type: "vendo",
-    description: "Barra de 4 metros con 12 taburetes a juego. Madera noble con acabado barnizado.",
-    price: "€1,600",
-    location: "Madrid",
-    distance: 5.8,
-    urgency: "baja",
-    user: {
-      name: "Patricia Vega",
-      restaurant: "Bar Central",
-      avatar: "/avatars/patricia.jpg",
-      isInNetwork: true,
-      rating: 4.7
-    },
-    createdAt: "hace 6 días",
-    views: 134,
-    responses: 9,
-    status: "activo"
-  },
-
-  // Aprovisionamientos
-  {
-    id: "4",
-    title: "Proveedor de mariscos frescos - Descuento especial",
-    category: "Aprovisionamientos",
-    type: "oferta",
-    description: "Distribuidor directo de Galicia. 20% descuento en primer pedido para nuevos clientes.",
-    location: "Valencia",
-    distance: 8.4,
-    urgency: "media",
-    user: {
-      name: "María González",
-      restaurant: "Mariscos El Puerto",
-      avatar: "/avatars/maria.jpg",
-      isInNetwork: true,
-      rating: 4.7
-    },
-    createdAt: "hace 3 días",
-    views: 178,
-    responses: 25,
-    status: "activo"
-  },
-  {
-    id: "15",
-    title: "Verduras ecológicas km0 - Entrega diaria",
-    category: "Aprovisionamientos",
-    type: "oferta",
-    description: "Productos de nuestra propia huerta. Entrega diaria en Barcelona y alrededores.",
-    location: "Barcelona",
-    distance: 11.2,
-    urgency: "baja",
-    user: {
-      name: "Jordi Mas",
-      restaurant: "Huerta Ecológica Jordi",
-      avatar: "/avatars/jordi.jpg",
-      isInNetwork: false,
-      rating: 4.8
-    },
-    createdAt: "hace 2 días",
-    views: 145,
-    responses: 16,
-    status: "activo"
-  },
-  {
-    id: "16",
-    title: "Carnes premium de Ávila - Distribuidor oficial",
-    category: "Aprovisionamientos",
-    type: "oferta",
-    description: "Ternera de Ávila IGP y Cochinillo de Segovia. Calidad superior garantizada.",
-    location: "Madrid",
-    distance: 2.9,
-    urgency: "media",
-    user: {
-      name: "Alberto Sánchez",
-      restaurant: "Carnes Selectas Alberto",
-      avatar: "/avatars/alberto.jpg",
-      isInNetwork: true,
-      rating: 4.9
-    },
-    createdAt: "hace 4 días",
-    views: 198,
-    responses: 31,
-    status: "activo"
-  },
-  {
-    id: "17",
-    title: "Pescado fresco de lonja - Entrega nocturna",
-    category: "Aprovisionamientos",
-    type: "oferta",
-    description: "Pescado directo de lonja de Valencia. Entrega nocturna para máxima frescura.",
-    location: "Valencia",
-    distance: 1.5,
-    urgency: "alta",
-    user: {
-      name: "Ricardo Mar",
-      restaurant: "Pescados Ricardo",
-      avatar: "/avatars/ricardo.jpg",
-      isInNetwork: true,
-      rating: 4.6
-    },
-    createdAt: "hace 1 día",
-    views: 267,
-    responses: 28,
-    status: "activo"
-  },
-
-  // Utensilios
-  {
-    id: "5",
-    title: "Utensilios de cocina profesional - Lote completo",
-    category: "Utensilios",
-    type: "vendo",
-    description: "Cuchillos, sartenes, ollas industriales. Cierre de restaurante, todo debe ir.",
-    price: "€1,200",
-    location: "Madrid",
-    distance: 5.1,
-    urgency: "alta",
-    user: {
-      name: "Elena Vega",
-      restaurant: "Bistró Moderno",
-      avatar: "/avatars/elena.jpg",
-      isInNetwork: false,
-      rating: 4.5
-    },
-    createdAt: "hace 1 día",
-    views: 267,
-    responses: 31,
-    status: "activo"
-  },
-  {
-    id: "18",
-    title: "Set de cuchillos profesionales Wüsthof",
-    category: "Utensilios",
-    type: "vendo",
-    description: "Juego completo de cuchillos alemanes, muy poco uso. Incluye soporte magnético.",
-    price: "€450",
-    location: "Barcelona",
-    distance: 6.7,
-    urgency: "media",
-    user: {
-      name: "Chef Daniel",
-      restaurant: "Cocina de Autor",
-      avatar: "/avatars/daniel.jpg",
-      isInNetwork: true,
-      rating: 4.8
-    },
-    createdAt: "hace 3 días",
-    views: 123,
-    responses: 15,
-    status: "activo"
-  },
-  {
-    id: "19",
-    title: "Ollas de acero inoxidable - Lote de 15",
-    category: "Utensilios",
-    type: "vendo",
-    description: "Ollas industriales de diferentes tamaños. Acero inoxidable 18/10, muy resistentes.",
-    price: "€680",
-    location: "Sevilla",
-    distance: 14.3,
-    urgency: "baja",
-    user: {
-      name: "Remedios Castro",
-      restaurant: "La Cocina de Remedios",
-      avatar: "/avatars/remedios.jpg",
-      isInNetwork: false,
-      rating: 4.5
-    },
-    createdAt: "hace 4 días",
-    views: 78,
-    responses: 6,
-    status: "activo"
-  },
-
-  // Bodega
-  {
-    id: "6",
-    title: "Selección de vinos premium - Bodega completa",
-    category: "Bodega",
-    type: "vendo",
-    description: "200 botellas de vinos selectos, perfectas para carta de alta gama.",
-    price: "€4,800",
-    location: "Barcelona",
-    distance: 12.8,
-    urgency: "media",
-    user: {
-      name: "David Fernández",
-      restaurant: "Vinoteca Selecta",
-      avatar: "/avatars/david.jpg",
-      isInNetwork: true,
-      rating: 4.8
-    },
-    createdAt: "hace 4 días",
-    views: 134,
-    responses: 15,
-    status: "activo"
-  },
-  {
-    id: "20",
-    title: "Champagne Dom Pérignon - 12 botellas",
-    category: "Bodega",
-    type: "vendo",
-    description: "Champagne de lujo, añada 2010. Perfectas para eventos especiales.",
-    price: "€2,400",
-    location: "Madrid",
-    distance: 3.4,
-    urgency: "baja",
-    user: {
-      name: "Sommelier Carlos",
-      restaurant: "Restaurante Gourmet",
-      avatar: "/avatars/sommelier.jpg",
-      isInNetwork: true,
-      rating: 4.9
-    },
-    createdAt: "hace 2 días",
-    views: 156,
-    responses: 12,
-    status: "activo"
-  },
-  {
-    id: "21",
-    title: "Cava artesanal catalán - Producción propia",
-    category: "Bodega",
-    type: "oferta",
-    description: "Cava de producción familiar, métodos tradicionales. Descuento por compra al por mayor.",
-    location: "Barcelona",
-    distance: 18.9,
-    urgency: "media",
-    user: {
-      name: "Familia Codorníu",
-      restaurant: "Cava Familiar",
-      avatar: "/avatars/codorniu.jpg",
-      isInNetwork: false,
-      rating: 4.7
-    },
-    createdAt: "hace 5 días",
-    views: 98,
-    responses: 8,
-    status: "activo"
-  },
-  {
-    id: "22",
-    title: "Vinos de Rioja - Lote de 50 botellas",
-    category: "Bodega",
-    type: "vendo",
-    description: "Selección de vinos tintos de Rioja, diferentes añadas y bodegas reconocidas.",
-    price: "€1,250",
-    location: "Valencia",
-    distance: 9.6,
-    urgency: "baja",
-    user: {
-      name: "Enrique Viñas",
-      restaurant: "Taberna del Vino",
-      avatar: "/avatars/enrique.jpg",
-      isInNetwork: true,
-      rating: 4.6
-    },
-    createdAt: "hace 6 días",
-    views: 112,
-    responses: 10,
-    status: "activo"
-  }
-];
-
-const categorySummaries: CategorySummary[] = [
-  {
+    key: "maquinaria",
     name: "Maquinaria",
     icon: Wrench,
-    totalAnnouncements: 45,
-    urgentCount: 8,
-    averagePrice: "€3,200",
-    topLocation: "Madrid",
-    recentActivity: "hace 2 horas",
-    color: "from-repsol-blue to-repsol-orange"
+    color: "text-repsol-blue",
+    gradient: "from-blue-500 to-indigo-500",
+    description: "Equipamiento y maquinaria profesional"
   },
   {
-    name: "Personal",
-    icon: UserCheck,
-    totalAnnouncements: 67,
-    urgentCount: 15,
-    averagePrice: "€1,800/mes",
-    topLocation: "Barcelona",
-    recentActivity: "hace 1 hora",
-    color: "from-green-500 to-green-600"
-  },
-  {
+    key: "mobiliario",
     name: "Mobiliario",
     icon: Sofa,
-    totalAnnouncements: 32,
-    urgentCount: 4,
-    averagePrice: "€850",
-    topLocation: "Valencia",
-    recentActivity: "hace 3 horas",
-    color: "from-purple-500 to-purple-600"
+    color: "text-repsol-blue",
+    gradient: "from-green-500 to-emerald-500",
+    description: "Muebles y decoración para hostelería"
   },
   {
-    name: "Aprovisionamientos",
-    icon: Truck,
-    totalAnnouncements: 89,
-    urgentCount: 12,
-    averagePrice: "€450",
-    topLocation: "Madrid",
-    recentActivity: "hace 30 min",
-    color: "from-orange-500 to-orange-600"
-  },
-  {
+    key: "utensilios",
     name: "Utensilios",
     icon: Utensils,
-    totalAnnouncements: 28,
-    urgentCount: 6,
-    averagePrice: "€290",
-    topLocation: "Sevilla",
-    recentActivity: "hace 1 hora",
-    color: "from-red-500 to-red-600"
+    color: "text-repsol-blue",
+    gradient: "from-orange-500 to-red-500",
+    description: "Herramientas y utensilios de cocina"
   },
   {
+    key: "menaje",
+    name: "Menaje",
+    icon: Package,
+    color: "text-repsol-blue",
+    gradient: "from-purple-500 to-pink-500",
+    description: "Vajilla, cristalería y mantelería"
+  },
+  {
+    key: "bodega",
     name: "Bodega",
     icon: Wine,
-    totalAnnouncements: 21,
-    urgentCount: 3,
-    averagePrice: "€1,400",
-    topLocation: "Barcelona",
-    recentActivity: "hace 2 horas",
-    color: "from-indigo-500 to-indigo-600"
+    color: "text-repsol-blue",
+    gradient: "from-red-500 to-rose-500",
+    description: "Vinos, licores y bebidas"
+  },
+  {
+    key: "aprovisionamientos",
+    name: "Aprovisionamientos",
+    icon: Truck,
+    color: "text-repsol-blue",
+    gradient: "from-indigo-500 to-blue-500",
+    description: "Ingredientes y suministros"
+  },
+  {
+    key: "servicios",
+    name: "Servicios",
+    icon: UserCheck,
+    color: "text-repsol-blue",
+    gradient: "from-emerald-500 to-green-500",
+    description: "Servicios profesionales"
   }
 ];
 

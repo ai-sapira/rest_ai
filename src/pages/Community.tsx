@@ -378,13 +378,13 @@ export default function Community({
           <div className="w-80 flex-shrink-0 hidden lg:block">
             <div className="sticky top-[calc(3.5rem+1.5rem)] max-h-[calc(100vh-6rem)] overflow-y-auto space-y-4 pr-2">
               {/* Enhanced Recommended Communities */}
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-orange-50/20">
+              <Card className="border-2 border-repsol-orange/20 hover:border-repsol-orange/40 shadow-sm hover:shadow-lg transition-all duration-300 bg-white">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <CardTitle className="flex items-center gap-2 text-base font-heading font-repsol-medium text-gray-900">
                     <div className="p-2 bg-repsol-blue rounded-full shadow-md">
                       <Hash className="h-4 w-4 text-white" />
                     </div>
-                    <span className="text-gray-900">Comunidades</span>
+                    <span>Comunidades</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -440,14 +440,18 @@ export default function Community({
                       {(allCommunities.length > 0 ? allCommunities : mockCommunities).slice(0, 5).map((community) => {
                         const isJoined = userCommunities.some(mc => mc.id === community.id);
                         return (
-                          <div key={community.id} className="group bg-white rounded-lg border border-orange-100 hover:border-orange-300 transition-all duration-200 hover:shadow-md p-3">
+                          <div key={community.id} className="group bg-white rounded-lg border border-repsol-orange/30 hover:border-repsol-orange transition-all duration-200 hover:shadow-md p-3">
                             <div className="flex items-center justify-between">
                               <div 
                                 className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
                                 onClick={() => handleCommunityClick(community.slug)}
                               >
-                                <div className="w-10 h-10 bg-repsol-blue rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-md">
-                                  {community.name.charAt(0).toUpperCase()}
+                                <div className="w-10 h-10 bg-gradient-to-br from-blue-50 to-orange-50 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                                  <img
+                                    src="/Guia_Repsol.svg"
+                                    alt="Guía Repsol"
+                                    className="w-6 h-auto opacity-40"
+                                  />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <h4 className="font-medium text-sm text-repsol-blue group-hover:text-orange-600 transition-colors truncate">
@@ -490,13 +494,13 @@ export default function Community({
               </Card>
 
               {/* Enhanced Trending Topics */}
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-orange-50/20">
+              <Card className="border-2 border-repsol-orange/20 hover:border-repsol-orange/40 shadow-sm hover:shadow-lg transition-all duration-300 bg-white">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <CardTitle className="flex items-center gap-2 text-base font-heading font-repsol-medium text-gray-900">
                     <div className="p-2 bg-repsol-blue rounded-full shadow-md">
                       <TrendingUp className="h-4 w-4 text-white" />
                     </div>
-                    <span className="text-gray-900">Tendencias</span>
+                    <span>Tendencias</span>
                     <Badge variant="secondary" className="ml-auto bg-orange-100 text-orange-700 text-xs">
                       Hot
                     </Badge>
@@ -510,7 +514,7 @@ export default function Community({
                     { tag: "#preciosenergia", posts: "723", trend: "down" },
                     { tag: "#equipamientobarato", posts: "512", trend: "up" }
                   ].map((topic, index) => (
-                    <div key={index} className="group cursor-pointer bg-white rounded-lg border border-orange-100 hover:border-orange-300 transition-all duration-200 hover:shadow-md">
+                    <div key={index} className="group cursor-pointer bg-white rounded-lg border border-repsol-orange/30 hover:border-repsol-orange transition-all duration-200 hover:shadow-md">
                       <div className="flex items-center justify-between p-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-repsol-blue rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md">

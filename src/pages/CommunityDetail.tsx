@@ -239,7 +239,13 @@ export default function CommunityDetail() {
         {displayCommunity?.banner_url ? (
           <img src={displayCommunity.banner_url} alt="cover" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full bg-gradient-to-r from-orange-50 via-repsol-blue/10 to-orange-50" />
+          <div className="w-full h-full bg-gradient-to-r from-repsol-blue via-repsol-blue/95 to-repsol-blue flex items-center justify-center">
+            <img
+              src="/Guia_Repsol.svg"
+              alt="Guía Repsol"
+              className="w-20 h-auto opacity-20"
+            />
+          </div>
         )}
         {(['admin','moderator'] as const).includes((role as any)) && (
           <div className="absolute right-4 bottom-3 flex items-center gap-2">
@@ -268,15 +274,19 @@ export default function CommunityDetail() {
       <div className="max-w-6xl mx-auto px-6 py-6">
         {/* Header */}
         <div className="flex items-start gap-4 mb-6">
-          <Avatar className="h-16 w-16 rounded-lg bg-repsol-blue">
+          <Avatar className="h-16 w-16 rounded-lg bg-gradient-to-br from-blue-50 to-orange-50 border-2 border-repsol-blue/20">
             <AvatarImage src={displayCommunity?.avatar_url || undefined} />
-            <AvatarFallback className="rounded-lg text-base font-semibold text-white bg-repsol-blue">
-              {titleInitials}
+            <AvatarFallback className="rounded-lg text-base font-semibold bg-gradient-to-br from-blue-50 to-orange-50 border-0">
+              <img
+                src="/Guia_Repsol.svg"
+                alt="Guía Repsol"
+                className="w-8 h-auto opacity-50"
+              />
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold truncate text-repsol-blue">
+              <h1 className="text-2xl font-heading font-repsol-medium truncate text-repsol-blue">
                 {loadingCommunity ? "Cargando comunidad..." : displayCommunity?.name}
               </h1>
               {!displayCommunity?.is_public && (
@@ -285,8 +295,21 @@ export default function CommunityDetail() {
                 </Badge>
               )}
             </div>
+            
+            {/* Creator info */}
+            <div className="flex items-center gap-2 mt-2">
+              <Avatar className="h-6 w-6 border border-repsol-orange/20">
+                <AvatarFallback className="bg-repsol-orange/10 text-repsol-orange text-xs font-medium">
+                  MC
+                </AvatarFallback>
+              </Avatar>
+              <p className="text-sm text-gray-600 font-body font-repsol-normal">
+                Creada por <span className="font-repsol-medium text-repsol-blue">María Carmen</span>
+              </p>
+            </div>
+            
             {displayCommunity?.description && (
-              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+              <p className="text-sm text-gray-600 mt-3 line-clamp-2">
                 {displayCommunity.description}
               </p>
             )}
@@ -401,12 +424,17 @@ export default function CommunityDetail() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-4">
-              <Card className="border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-orange-50/20">
-                <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg">
-                  <CardTitle className="text-base font-semibold">Sobre la comunidad</CardTitle>
+              <Card className="border-2 border-repsol-orange/20 shadow-lg hover:shadow-xl hover:border-repsol-orange/40 transition-all duration-300 bg-white">
+                <CardHeader className="bg-white border-b-2 border-repsol-orange/20">
+                  <CardTitle className="text-base font-heading font-repsol-medium flex items-center gap-2 text-gray-900">
+                    <div className="p-1.5 bg-repsol-orange rounded-lg">
+                      <Users className="h-4 w-4 text-white" />
+                    </div>
+                    Sobre la comunidad
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm text-gray-600 p-4">
-                  <p className="leading-relaxed text-gray-700">
+                  <p className="leading-relaxed text-gray-700 font-body font-repsol-normal">
                     {displayCommunity?.description || "Sin descripción todavía."}
                   </p>
                   <Separator className="bg-orange-100" />
@@ -422,9 +450,14 @@ export default function CommunityDetail() {
               </Card>
 
               {/* Community Rules */}
-              <Card className="border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-orange-50/20">
-                <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-t-lg">
-                  <CardTitle className="text-base font-semibold">Reglas de la comunidad</CardTitle>
+              <Card className="border-2 border-repsol-orange/20 shadow-lg hover:shadow-xl hover:border-repsol-orange/40 transition-all duration-300 bg-white">
+                <CardHeader className="flex flex-row items-center justify-between bg-white border-b-2 border-repsol-orange/20">
+                  <CardTitle className="text-base font-heading font-repsol-medium flex items-center gap-2 text-gray-900">
+                    <div className="p-1.5 bg-repsol-orange rounded-lg">
+                      <Shield className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="whitespace-nowrap">Reglas</span>
+                  </CardTitle>
                   {(['admin','moderator'] as const).includes((role as any)) && (
                     <Button 
                       variant={isEditingRules ? 'secondary' : 'outline'} 

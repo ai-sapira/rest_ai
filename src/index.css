@@ -140,6 +140,10 @@
     font-weight: 500;
   }
   
+  .font-repsol-semibold {
+    font-weight: 600;
+  }
+  
   /* Repsol brand colors */
   .text-repsol-blue {
     color: #001E37;
