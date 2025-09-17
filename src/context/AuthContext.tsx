@@ -37,53 +37,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile
+  // Simplified profile fetch - just create fallback and complete auth
   const fetchProfile = async (userId: string) => {
-    console.log('🔐 AuthContext: Fetching profile for user:', userId);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (!error && data) {
-        console.log('🔐 AuthContext: Profile found:', data.full_name);
-        setProfile(data);
-      } else {
-        console.log('🔐 AuthContext: No profile found, creating fallback');
-        // Create fallback profile from auth metadata
-        const fallback: Profile = {
-          user_id: userId,
-          full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario',
-          avatar_url: user?.user_metadata?.avatar_url || null,
-          restaurant_name: user?.user_metadata?.restaurant_name || null,
-          region: user?.user_metadata?.region || null,
-          bio: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        setProfile(fallback);
-        
-        // Try to persist profile (non-blocking)
-        try {
-          await supabase.from('profiles').upsert({
-            user_id: userId,
-            full_name: fallback.full_name,
-            avatar_url: fallback.avatar_url,
-            restaurant_name: fallback.restaurant_name,
-            region: fallback.region,
-          });
-        } catch (_e) {
-          // Silent fail for profile persistence
-        }
-      }
-    } catch (error) {
-      console.error('🔐 AuthContext: Error fetching profile:', error);
-    } finally {
-      console.log('🔐 AuthContext: Profile fetch complete, setting loading to false');
-      setLoading(false);
-    }
+    console.log('🔐 AuthContext: Creating profile for user:', userId);
+    
+    // Just create a simple fallback profile and complete auth immediately
+    const fallback: Profile = {
+      user_id: userId,
+      full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario',
+      avatar_url: user?.user_metadata?.avatar_url || null,
+      restaurant_name: user?.user_metadata?.restaurant_name || null,
+      region: user?.user_metadata?.region || null,
+      bio: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    
+    setProfile(fallback);
+    console.log('🔐 AuthContext: Profile created, completing auth');
+    setLoading(false);
   };
 
   // Initialize auth
@@ -149,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Auth methods
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      setLoading(true);
+      console.log('🔐 AuthContext: Starting signup for:', email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -161,35 +133,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
+        console.error('🔐 AuthContext: Signup error:', error);
         return { data: null, error };
       }
 
+      console.log('🔐 AuthContext: Signup successful');
       return { data, error: null };
     } catch (error: any) {
+      console.error('🔐 AuthContext: Signup exception:', error);
       return { data: null, error };
-    } finally {
-      setLoading(false);
     }
+    // Don't set loading false here - let the auth state change handle it
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      setLoading(true);
+      console.log('🔐 AuthContext: Starting signin for:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error('🔐 AuthContext: Signin error:', error);
         return { data: null, error };
       }
 
+      console.log('🔐 AuthContext: Signin successful');
       return { data, error: null };
     } catch (error: any) {
+      console.error('🔐 AuthContext: Signin exception:', error);
       return { data: null, error };
-    } finally {
-      setLoading(false);
     }
+    // Don't set loading false here - let the auth state change handle it
   };
 
   const signOut = async () => {
