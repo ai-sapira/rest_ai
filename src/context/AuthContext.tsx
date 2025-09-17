@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch user profile
   const fetchProfile = async (userId: string) => {
+    console.log('🔐 AuthContext: Fetching profile for user:', userId);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -47,8 +48,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (!error && data) {
+        console.log('🔐 AuthContext: Profile found:', data.full_name);
         setProfile(data);
       } else {
+        console.log('🔐 AuthContext: No profile found, creating fallback');
         // Create fallback profile from auth metadata
         const fallback: Profile = {
           user_id: userId,
@@ -76,8 +79,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('🔐 AuthContext: Error fetching profile:', error);
     } finally {
+      console.log('🔐 AuthContext: Profile fetch complete, setting loading to false');
       setLoading(false);
     }
   };
@@ -104,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           fetchProfile(session.user.id);
         } else {
+          console.log('🔐 AuthContext: No initial session, loading complete');
           setLoading(false);
         }
       })
@@ -124,8 +129,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        console.log('🔐 AuthContext: User found, fetching profile...');
         await fetchProfile(session.user.id);
       } else {
+        console.log('🔐 AuthContext: No user in auth state change, clearing profile');
         setProfile(null);
         setLoading(false);
       }
@@ -137,16 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Safety timeout to prevent infinite loading - only if truly stuck
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (loading) {
-        console.warn('Auth loading timeout reached, forcing loading to false');
-        setLoading(false);
-      }
-    }, 8000); // Increased timeout and only if really stuck
-    return () => clearTimeout(timeoutId);
-  }, [loading]);
+  // Removed problematic timeout - let auth complete naturally
 
   // Auth methods
   const signUp = async (email: string, password: string, fullName: string) => {

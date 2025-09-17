@@ -36,10 +36,13 @@ const queryClient = new QueryClient({
 
 // Component that handles root redirect after auth is ready
 function RootRedirect() {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
   
-  // Wait for auth to finish loading before redirecting
+  console.log('🔍 RootRedirect: loading:', loading, 'user:', !!user, user?.id);
+  
+  // Wait for auth to finish loading completely before redirecting
   if (loading) {
+    console.log('🔍 RootRedirect: Auth still loading, showing loading screen');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -51,13 +54,14 @@ function RootRedirect() {
             />
             <span className="font-medium text-2xl text-orange-600 italic">community</span>
           </div>
-          <p className="text-gray-600">Cargando...</p>
+          <p className="text-gray-600">Inicializando autenticación...</p>
         </div>
       </div>
     );
   }
   
   // Once auth is ready, redirect to platform
+  console.log('🔍 RootRedirect: Auth ready, redirecting to platform with user:', !!user);
   return <Navigate to="/platform/comunidad" replace />;
 }
 

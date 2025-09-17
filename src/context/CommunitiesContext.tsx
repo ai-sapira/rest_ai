@@ -127,18 +127,30 @@ export function CommunitiesProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     console.log('🔍 CommunitiesContext useEffect TRIGGERED:', { authLoading, userId: user?.id });
     
-    // Only proceed if auth is not loading
+    // Only proceed if auth is definitely not loading
+    // Be more permissive - sometimes authLoading might flicker
     if (!authLoading) {
       console.log('🔄 CommunitiesContext: Auth ready, loading data');
-      refresh();
+      // Small delay to ensure auth is stable
+      const stableDelay = setTimeout(() => {
+        refresh();
+      }, 50);
+      
+      return () => {
+        clearTimeout(stableDelay);
+        if (refreshTimeoutRef.current) {
+          console.log('🔍 CommunitiesContext: Cleaning up refresh timeout');
+          clearTimeout(refreshTimeoutRef.current);
+        }
+      };
     } else {
       console.log('🔄 CommunitiesContext: Auth still loading, waiting...');
     }
 
-    // Cleanup function
+    // Cleanup function for when auth is loading
     return () => {
       if (refreshTimeoutRef.current) {
-        console.log('🔍 CommunitiesContext: Cleaning up refresh timeout');
+        console.log('🔍 CommunitiesContext: Cleaning up refresh timeout (auth loading)');
         clearTimeout(refreshTimeoutRef.current);
       }
     };
