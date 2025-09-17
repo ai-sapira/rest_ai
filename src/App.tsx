@@ -6,7 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ChakraProvider } from "@chakra-ui/react";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import Index from "./pages/Index";
 import Platform from "./pages/Platform";
 import NotFound from "./pages/NotFound";
@@ -33,6 +33,28 @@ const queryClient = new QueryClient({
   },
 });
 
+// Component that handles root redirect after auth is ready
+function RootRedirect() {
+  const { loading } = useAuth();
+  
+  // Wait for auth to finish loading before redirecting
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <span className="text-white font-bold text-2xl">H</span>
+          </div>
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Once auth is ready, redirect to platform
+  return <Navigate to="/platform/comunidad" replace />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -43,7 +65,7 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<Navigate to="/platform/comunidad" replace />} />
+                <Route path="/" element={<RootRedirect />} />
                 <Route path="/platform/*" element={<Platform />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

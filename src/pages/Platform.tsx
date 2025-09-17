@@ -318,7 +318,7 @@ export default function Platform() {
     }
   }, [location.pathname]);
 
-  // Show loading state
+  // Show loading state only briefly - most auth should be handled at App level
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -326,7 +326,7 @@ export default function Platform() {
           <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <span className="text-white font-bold text-2xl">H</span>
           </div>
-          <p className="text-gray-600">Cargando...</p>
+          <p className="text-gray-600">Verificando sesión...</p>
         </div>
       </div>
     );

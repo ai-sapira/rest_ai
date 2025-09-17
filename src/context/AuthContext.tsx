@@ -84,11 +84,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize auth
   useEffect(() => {
+    console.log('🔐 AuthContext: Initializing auth...');
+    
     // Get initial session
     supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('🔐 AuthContext: Error getting session:', error);
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('🔐 AuthContext: Initial session:', !!session, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
+        
         if (session?.user) {
           fetchProfile(session.user.id);
         } else {
@@ -96,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch((err) => {
-        console.error('Auth session error:', err);
+        console.error('🔐 AuthContext: Session error:', err);
         setSession(null);
         setUser(null);
         setLoading(false);
@@ -106,6 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔐 AuthContext: Auth state change:', event, !!session, session?.user?.id);
+      
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -117,7 +131,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('🔐 AuthContext: Cleaning up auth subscription');
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Safety timeout to prevent infinite loading - only if truly stuck
@@ -179,13 +196,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      console.log('🔐 AuthContext: Signing out...');
       setLoading(true);
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
       setProfile(null);
+      console.log('🔐 AuthContext: Sign out completed');
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('🔐 AuthContext: Error signing out:', error);
     } finally {
       setLoading(false);
     }
