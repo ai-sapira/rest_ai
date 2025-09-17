@@ -38,21 +38,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   // Simplified profile fetch - just create fallback and complete auth
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, userData?: any) => {
     console.log('🔐 AuthContext: Creating profile for user:', userId);
+    console.log('🔐 AuthContext: User data available:', {
+      userMetadata: userData?.user_metadata,
+      email: userData?.email
+    });
+    
+    // Use userData parameter if provided, otherwise fall back to state
+    const currentUser = userData || user;
     
     // Just create a simple fallback profile and complete auth immediately
     const fallback: Profile = {
       user_id: userId,
-      full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario',
-      avatar_url: user?.user_metadata?.avatar_url || null,
-      restaurant_name: user?.user_metadata?.restaurant_name || null,
-      region: user?.user_metadata?.region || null,
+      full_name: currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'Usuario',
+      avatar_url: currentUser?.user_metadata?.avatar_url || null,
+      restaurant_name: currentUser?.user_metadata?.restaurant_name || null,
+      region: currentUser?.user_metadata?.region || null,
       bio: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     
+    console.log('🔐 AuthContext: Creating profile with name:', fallback.full_name);
     setProfile(fallback);
     console.log('🔐 AuthContext: Profile created, completing auth');
     setLoading(false);
@@ -78,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          fetchProfile(session.user.id);
+          fetchProfile(session.user.id, session.user);
         } else {
           console.log('🔐 AuthContext: No initial session, loading complete');
           setLoading(false);
@@ -102,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (session?.user) {
         console.log('🔐 AuthContext: User found, fetching profile...');
-        await fetchProfile(session.user.id);
+        await fetchProfile(session.user.id, session.user);
       } else {
         console.log('🔐 AuthContext: No user in auth state change, clearing profile');
         setProfile(null);
