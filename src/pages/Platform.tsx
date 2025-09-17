@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { pageTransitionVariants } from "@/hooks/useNavigationTransition";
 
@@ -364,7 +364,7 @@ export default function Platform() {
         <main className="flex-1 min-w-0 bg-background ml-60 pt-14">
           <AnimatePresence>
             <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Navigate to="/platform/comunidad" replace />} />
             <Route 
               path="/comunidad" 
               element={

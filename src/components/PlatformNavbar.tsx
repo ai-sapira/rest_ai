@@ -140,12 +140,12 @@ export function PlatformNavbar({ onCreatePost, onCreateCommunity, activeTab = "r
     try {
       await signOut();
     } finally {
-      // Always navigate to login after local state reset
-      navigate('/platform/perfil');
+      // Navigate to root which will redirect to login
+      navigate('/');
       // For SPA, a hard redirect ensures tokens are dropped in all tabs if needed
       setTimeout(() => {
-        if (location.pathname !== '/platform/perfil') {
-          navigate('/platform/perfil');
+        if (location.pathname !== '/') {
+          navigate('/');
         }
       }, 50);
     }

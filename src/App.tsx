@@ -60,9 +60,9 @@ function RootRedirect() {
     );
   }
   
-  // Once auth is ready, redirect to platform dashboard
-  console.log('🔍 RootRedirect: Auth ready, redirecting to platform dashboard with user:', !!user);
-  return <Navigate to="/platform" replace />;
+  // Once auth is ready, redirect to community (main page)
+  console.log('🔍 RootRedirect: Auth ready, redirecting to community with user:', !!user);
+  return <Navigate to="/platform/comunidad" replace />;
 }
 
 const App = () => (
